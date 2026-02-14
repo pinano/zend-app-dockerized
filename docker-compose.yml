@@ -2,7 +2,7 @@ services:
 
   # --- App ---
   app:
-    image: ${PROJECT_NAME}-app:${PHP_VERSION:-7.4}
+    image: bogo/${PROJECT_NAME}-app:${PHP_VERSION:-7.4}-fpm-apache
     container_name: app-${PROJECT_NAME}
     deploy:
       resources:
