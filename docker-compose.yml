@@ -120,7 +120,7 @@ services:
     container_name: sftp-${PROJECT_NAME}
     restart: unless-stopped
     ports:
-      - "${SFTP_PORT}:22"
+      - "127.0.0.1:${SFTP_PORT}:22" # <--- Only accessible from the host itself
     volumes:
       - ./docroot:/home/${SFTP_USER}/upload
     command: ${SFTP_USER}:${SFTP_PASS}:${USER_ID:-1000}:${GROUP_ID:-1000}
