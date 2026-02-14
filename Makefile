@@ -53,10 +53,4 @@ build:
 .PHONY: db
 db:
 	@echo "🔌 Connecting to database..."
-	@if [ -f .env ]; then \
-		export $$(grep -v '^#' .env | xargs) && \
-		docker compose exec db sh -c 'mariadb -u $${DB_USER} -p$${DB_PASS} $${DB_NAME}'; \
-	else \
-		echo "❌ .env file not found"; \
-		exit 1; \
-	fi
+	@docker compose exec db sh -c 'mariadb -u $${MARIADB_USER} -p$${MARIADB_PASSWORD} $${MARIADB_DATABASE}'
