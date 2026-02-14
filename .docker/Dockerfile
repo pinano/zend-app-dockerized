@@ -25,7 +25,6 @@ RUN usermod -u ${USER_ID} www-data && \
 COPY .docker/scripts/init-tmp-dirs.sh /etc/entrypoint.d/99-init-tmp-dirs.sh
 RUN chmod +x /etc/entrypoint.d/99-init-tmp-dirs.sh
 # -----------------
-# -----------------
 
 # Install required PHP extensions with root permissions
 RUN install-php-extensions exif imagick gd intl
