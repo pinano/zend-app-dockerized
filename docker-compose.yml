@@ -7,8 +7,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'       # Máximo 1 core por proyecto (puedes subirlo si es pesado)
-          memory: 512M      # Suficiente para PHP 7.4 en la mayoría de apps
+          cpus: '1.0' # Max 1 core per project (increase if heavy)
+          memory: 512M # Enough for PHP 7.4 in most apps
         reservations:
           memory: 128M
     depends_on:
@@ -24,8 +24,13 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./config-apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
       - ./docroot:/var/www/html
-      - /var/www/html/tmp
+      - type: tmpfs
+        target: /var/www/html/tmp
+        tmpfs:
+          size: 128M
     environment:
+      APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
+      APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
       PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
       PHP_VERSION: ${PHP_VERSION:-7.4}
       USER_ID: ${USER_ID}
@@ -38,6 +43,11 @@ services:
       PHP_OPCACHE_ENABLE: 1
       PHP_OPCACHE_MEMORY_CONSUMPTION: 128
       PHP_MAX_EXECUTION_TIME: 60
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8080/healthcheck || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     logging:
       driver: "json-file"
       options:
@@ -58,18 +68,18 @@ services:
     container_name: db-${PROJECT_NAME}
     command:
       - --default-authentication-plugin=mysql_native_password
-      - --max-connections=100             # No necesitas 1000 por proyecto
-      - --innodb-buffer-pool-size=256M    # Ajusta según el tamaño de tu DB
+      - --max-connections=100 # You don't need 1000 per project
+      - --innodb-buffer-pool-size=256M # Adjust according to your DB size
       - --innodb-log-file-size=64M
     deploy:
       resources:
         limits:
-          cpus: '2.0'        # MariaDB agradece tener un poco más de margen en picos
-          memory: 1G         # Límite estricto para que no crezca infinito
+          cpus: '2.0' # MariaDB appreciates a bit more headroom during peaks
+          memory: 1G # Strict limit to prevent infinite growth
         reservations:
           memory: 256M
     healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -82,7 +92,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./mariadb_data:/var/lib/mysql
     ports:
-      - "127.0.0.1:${DB_HOST_PORT}:3306"  # <--- Solo accesible desde el propio servidor
+      - "127.0.0.1:${DB_HOST_PORT}:3306" # <--- Only accessible from the host itself
     environment:
       TZ: ${TZ}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS}
@@ -110,6 +120,6 @@ services:
 networks:
   traefik:
     external: true
-  backnet: # Docker creará una 'backnet' distinta por cada proyecto
+  backnet:
+    # Docker will create a distinct 'backnet' for each project
     driver: bridge
-

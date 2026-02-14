@@ -1,9 +1,9 @@
 #!/bin/bash
 
-echo "🛑 Deteniendo y limpiando contenedores..."
+echo "🛑 Stopping and cleaning up containers..."
 
 docker compose \
     -f docker-compose.yml \
     down --remove-orphans
 
-echo "✅ Proyecto detenido"
+echo "✅ Project stopped"

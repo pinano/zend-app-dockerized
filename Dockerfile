@@ -20,18 +20,11 @@ RUN usermod -u ${USER_ID} www-data && \
 # -----------------
 
 # --- ZEND TMP STRUCTURE ---
-# Creamos la estructura de directorios necesaria para Zend Framework 1
-# Usamos el usuario www-data que acabamos de sincronizar
-RUN mkdir -p /var/www/html/tmp/cache \
-             /var/www/html/tmp/cache_class \
-             /var/www/html/tmp/cache_core \
-             /var/www/html/tmp/cache_core_300 \
-             /var/www/html/tmp/cache_core_60 \
-             /var/www/html/tmp/cache_forms \
-             /var/www/html/tmp/cache_pages \
-             /var/www/html/tmp/sessions && \
-    chown -R www-data:www-data /var/www/html/tmp && \
-    chmod -R 775 /var/www/html/tmp
+# Copy the initialization script to run on startup
+# This is necessary because we will use tmpfs for /var/www/html/tmp
+COPY init-tmp-dirs.sh /etc/entrypoint.d/99-init-tmp-dirs.sh
+RUN chmod +x /etc/entrypoint.d/99-init-tmp-dirs.sh
+# -----------------
 # -----------------
 
 # Install required PHP extensions with root permissions
