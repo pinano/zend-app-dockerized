@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Ruta absoluta para que funcione desde cualquier sitio
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -f "$DIR/.env" ]; then
+    # Usamos albedo para manejar espacios o caracteres raros
+    export $(grep -v '^#' "$DIR/.env" | xargs -d '\n')
+else
+    echo "Error: No encuentro el archivo .env en $DIR"
+    exit 1
+fi
+
+# Conexión directa
+# Nota: Si DB_HOST es el nombre del contenedor, esto entra al CLI de MariaDB
+docker exec -it "$DB_HOST" mariadb -u "$DB_USER" -p"$DB_PASS"

@@ -1,0 +1,114 @@
+services:
+
+  # --- App ---
+  app:
+    image: serversideup/php:7.4-fpm-apache-bogo
+    container_name: app-${PROJECT_NAME}
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'       # Máximo 1 core por proyecto (puedes subirlo si es pesado)
+          memory: 512M      # Suficiente para PHP 7.4 en la mayoría de apps
+        reservations:
+          memory: 128M
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./config-apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
+      - ./docroot:/var/www/html
+      - /var/www/html/tmp
+    environment:
+      PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
+      USER_ID: ${USER_ID}
+      GROUP_ID: ${GROUP_ID}
+      TZ: ${TZ}
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASS}
+      PHP_OPCACHE_ENABLE: 1
+      PHP_OPCACHE_MEMORY_CONSUMPTION: 128
+      PHP_MAX_EXECUTION_TIME: 60
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    restart: unless-stopped
+    networks:
+      - traefik
+      - backnet
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.services.app-${PROJECT_NAME}.loadbalancer.server.port=8080"
+
+  # --- MariaDB ---
+  db:
+    image: mariadb:12.1.2
+    container_name: db-${PROJECT_NAME}
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --max-connections=100             # No necesitas 1000 por proyecto
+      - --innodb-buffer-pool-size=256M    # Ajusta según el tamaño de tu DB
+      - --innodb-log-file-size=64M
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'        # MariaDB agradece tener un poco más de margen en picos
+          memory: 1G         # Límite estricto para que no crezca infinito
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./mariadb_data:/var/lib/mysql
+    ports:
+      - "127.0.0.1:${DB_HOST_PORT}:3306"  # <--- Solo accesible desde el propio servidor
+    environment:
+      TZ: ${TZ}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASS}
+    restart: unless-stopped
+    networks:
+      - backnet
+
+  # --- SFTP ---
+  sftp:
+    image: atmoz/sftp:latest
+    container_name: sftp-${PROJECT_NAME}
+    restart: unless-stopped
+    ports:
+      - "${SFTP_PORT}:22"
+    volumes:
+      - ./docroot:/home/${SFTP_USER}/upload
+    command: ${SFTP_USER}:${SFTP_PASS}:${USER_ID:-1000}:${GROUP_ID:-1000}
+    networks:
+      - backnet
+
+# --- Networks ---
+networks:
+  traefik:
+    external: true
+  backnet: # Docker creará una 'backnet' distinta por cada proyecto
+    driver: bridge
+
