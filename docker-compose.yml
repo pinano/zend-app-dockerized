@@ -27,6 +27,7 @@ services:
       - /var/www/html/tmp
     environment:
       PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
+      PHP_VERSION: ${PHP_VERSION:-7.4}
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
       TZ: ${TZ}

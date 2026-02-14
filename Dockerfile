@@ -1,5 +1,8 @@
+# Delcare PHP version before FROM
+ARG PHP_VERSION=7.4
+
 # Choose our base image
-FROM serversideup/php:7.4-fpm-apache
+FROM serversideup/php:${PHP_VERSION}-fpm-apache
 
 # Arguments coming from docker-compose to handle permissions dynamically
 ARG USER_ID
