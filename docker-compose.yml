@@ -74,7 +74,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.services.app-${PROJECT_NAME}.loadbalancer.server.port=8080"
+      - "traefik.http.services.${PROJECT_NAME}-app.loadbalancer.server.port=8080"
 
   # --- MariaDB ---
   db:
