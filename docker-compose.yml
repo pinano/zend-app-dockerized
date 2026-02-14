@@ -2,7 +2,7 @@ services:
 
   # --- App ---
   app:
-    image: serversideup/php:7.4-fpm-apache-bogo
+    image: serversideup/php:${PHP_VERSION:-7.4}-fpm-apache-bogo
     container_name: app-${PROJECT_NAME}
     deploy:
       resources:
@@ -16,33 +16,44 @@ services:
         condition: service_healthy
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: .docker/Dockerfile
       args:
+        - PHP_VERSION=${PHP_VERSION:-7.4}
         - USER_ID=${USER_ID:-1000}
         - GROUP_ID=${GROUP_ID:-1000}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ./config-apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
+      - ./.docker/apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
       - ./docroot:/var/www/html
       - type: tmpfs
         target: /var/www/html/tmp
         tmpfs:
           size: 128M
     environment:
-      APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
-      APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
-      PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
-      PHP_VERSION: ${PHP_VERSION:-7.4}
+      # System
+      TZ: ${TZ}
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
-      TZ: ${TZ}
+      # Apache
+      APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
+      APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
+      # PHP
+      PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
+      PHP_MAX_EXECUTION_TIME: 60
+      # Performance Tuning (Realpath)
+      #PHP_REALPATH_CACHE_SIZE: 16M
+      PHP_REALPATH_CACHE_TTL: 7200
+      # Performance Tuning (OPcache)
+      PHP_OPCACHE_ENABLE: 1
+      PHP_OPCACHE_MEMORY_CONSUMPTION: 256
+      PHP_OPCACHE_MAX_ACCELERATED_FILES: 20000
+      PHP_OPCACHE_VALIDATE_TIMESTAMPS: 1
+      PHP_OPCACHE_REVALIDATE_FREQ: 0
+      # Database
       DB_HOST: db
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASS}
-      PHP_OPCACHE_ENABLE: 1
-      PHP_OPCACHE_MEMORY_CONSUMPTION: 128
-      PHP_MAX_EXECUTION_TIME: 60
     healthcheck:
       test: [ "CMD-SHELL", "curl -f http://localhost:8080/healthcheck || exit 1" ]
       interval: 30s

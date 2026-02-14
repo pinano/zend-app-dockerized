@@ -22,8 +22,9 @@ RUN usermod -u ${USER_ID} www-data && \
 # --- ZEND TMP STRUCTURE ---
 # Copy the initialization script to run on startup
 # This is necessary because we will use tmpfs for /var/www/html/tmp
-COPY init-tmp-dirs.sh /etc/entrypoint.d/99-init-tmp-dirs.sh
+COPY .docker/scripts/init-tmp-dirs.sh /etc/entrypoint.d/99-init-tmp-dirs.sh
 RUN chmod +x /etc/entrypoint.d/99-init-tmp-dirs.sh
+# -----------------
 # -----------------
 
 # Install required PHP extensions with root permissions
