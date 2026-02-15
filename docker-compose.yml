@@ -119,7 +119,7 @@ services:
 
   # --- SFTP ---
   sftp:
-    image: atmoz/sftp:latest
+    image: atmoz/sftp:alpine
     container_name: ${PROJECT_NAME}-sftp
     restart: unless-stopped
     ports:
