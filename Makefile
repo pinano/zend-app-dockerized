@@ -6,8 +6,8 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  up       Start the stack (creates .env if missing)"
-	@echo "  down     Stop the stack and remove orphans"
+	@echo "  start    Start the stack (creates .env if missing)"
+	@echo "  stop     Stop the stack and remove orphans"
 	@echo "  restart  Restart the stack"
 	@echo "  logs     Tail container logs"
 	@echo "  shell    Open a shell in the app container"
@@ -15,8 +15,8 @@ help:
 	@echo "  build    Rebuild the app container"
 	@echo "  db       Connect to MariaDB console"
 
-.PHONY: up
-up:
+.PHONY: start
+start:
 	@if [ ! -f .env ]; then \
 		echo "⚠️  .env file not found, creating one from .env.dist..."; \
 		cp .env.dist .env; \
@@ -25,14 +25,14 @@ up:
 	@docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
 
-.PHONY: down
-down:
+.PHONY: stop
+stop:
 	@echo "🛑 Stopping containers..."
 	@docker compose down --remove-orphans
 	@echo "✅ Stack is down!"
 
 .PHONY: restart
-restart: down up
+restart: stop start
 
 .PHONY: logs
 logs:
