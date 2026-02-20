@@ -7,10 +7,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0' # Max 1 core per project (increase if heavy)
-          memory: 512M # Enough for PHP 7.4 in most apps
+          cpus: '${APP_CPUS:-1.0}' # Max cores per project (increase if heavy)
+          memory: ${APP_MEMORY:-512M} # Memory limit
         reservations:
-          memory: 128M
+          memory: ${APP_MEMORY_RESERVATION:-128M}
     depends_on:
       db:
         condition: service_healthy
@@ -24,6 +24,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./.docker/apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
+      - ./.docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docroot:/var/www/html
       - type: tmpfs
         target: /var/www/html/tmp
@@ -34,22 +35,24 @@ services:
       TZ: ${TZ}
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
+      APP_ENV: ${APP_ENV:-production}
       # Apache
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
       APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
       # PHP
+      PHP_EXTENSION_XDEBUG: ${PHP_EXTENSION_XDEBUG:-0}
       PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
       PHP_POST_MAX_SIZE: ${PHP_POST_MAX_SIZE:-50M}
       PHP_UPLOAD_MAX_FILE_SIZE: ${PHP_UPLOAD_MAX_FILE_SIZE:-10M}
       PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-512M}
       PHP_MAX_EXECUTION_TIME: ${PHP_MAX_EXECUTION_TIME:-60}
       # Performance Tuning (Realpath)
-      #PHP_REALPATH_CACHE_SIZE: 16M
-      PHP_REALPATH_CACHE_TTL: 7200
+      PHP_REALPATH_CACHE_SIZE: ${PHP_REALPATH_CACHE_SIZE:-16M}
+      PHP_REALPATH_CACHE_TTL: ${PHP_REALPATH_CACHE_TTL:-7200}
       # Performance Tuning (OPcache)
       PHP_OPCACHE_ENABLE: 1
-      PHP_OPCACHE_MEMORY_CONSUMPTION: 256
-      PHP_OPCACHE_MAX_ACCELERATED_FILES: 20000
+      PHP_OPCACHE_MEMORY_CONSUMPTION: ${PHP_OPCACHE_MEMORY_CONSUMPTION:-256}
+      PHP_OPCACHE_MAX_ACCELERATED_FILES: ${PHP_OPCACHE_MAX_ACCELERATED_FILES:-20000}
       PHP_OPCACHE_VALIDATE_TIMESTAMPS: 1
       PHP_OPCACHE_REVALIDATE_FREQ: 0
       # Database
@@ -76,22 +79,71 @@ services:
       - "traefik.docker.network=traefik"
       - "traefik.http.services.${PROJECT_NAME}-app.loadbalancer.server.port=8080"
 
+  # --- Cron ---
+  cron:
+    image: bogo/${PROJECT_NAME}-cron:${PHP_VERSION:-7.4}-cli
+    container_name: ${PROJECT_NAME}-cron
+    deploy:
+      resources:
+        limits:
+          cpus: '${APP_CPUS:-1.0}'
+          memory: ${APP_MEMORY:-512M}
+        reservations:
+          memory: ${APP_MEMORY_RESERVATION:-128M}
+    depends_on:
+      db:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+      args:
+        - PHP_VERSION=${PHP_VERSION:-7.4}
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./.docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+      - ./.docker/scripts/crontab:/etc/cron.d/app-cron:ro
+      - ./docroot:/var/www/html
+      - type: tmpfs
+        target: /var/www/html/tmp
+        tmpfs:
+          size: 64M
+    environment:
+      # System
+      TZ: ${TZ}
+      USER_ID: ${USER_ID}
+      GROUP_ID: ${GROUP_ID}
+      APP_ENV: ${APP_ENV:-production}
+      # PHP
+      PHP_MAX_EXECUTION_TIME: 0 # No limit for CLI
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-512M}
+      # Database
+      DB_HOST: db
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASS}
+    command: cron -f
+    restart: unless-stopped
+    networks:
+      - backnet
+
   # --- MariaDB ---
   db:
     image: mariadb:12.1.2
     container_name: ${PROJECT_NAME}-db
     command:
       - --default-authentication-plugin=mysql_native_password
-      - --max-connections=100 # You don't need 1000 per project
-      - --innodb-buffer-pool-size=256M # Adjust according to your DB size
-      - --innodb-log-file-size=64M
+      - --max-connections=${DB_MAX_CONNECTIONS:-100} # Adjust based on traffic
+      - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-256M} # Adjust according to DB size
+      - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-64M}
     deploy:
       resources:
         limits:
-          cpus: '2.0' # MariaDB appreciates a bit more headroom during peaks
-          memory: 1G # Strict limit to prevent infinite growth
+          cpus: '${DB_CPUS:-2.0}' # MariaDB headroom during peaks
+          memory: ${DB_MEMORY:-1G} # Strict limit to prevent infinite growth
         reservations:
-          memory: 256M
+          memory: ${DB_MEMORY_RESERVATION:-256M}
     healthcheck:
       test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 10s
@@ -127,6 +179,28 @@ services:
     volumes:
       - ./docroot:/home/${SFTP_USER}/upload
     command: ${SFTP_USER}:${SFTP_PASS}:${USER_ID:-1000}:${GROUP_ID:-1000}
+    networks:
+      - backnet
+
+  # --- Optional Redis Cache (requires COMPOSE_PROFILES=redis) ---
+  redis:
+    image: redis:7.2-alpine
+    container_name: ${PROJECT_NAME}-redis
+    profiles: [ "redis" ]
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          memory: 64M
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
     networks:
       - backnet
 
