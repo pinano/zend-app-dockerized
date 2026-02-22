@@ -75,6 +75,11 @@ DB_MEMORY=512M   → DB_INNODB_BUFFER_POOL_SIZE=256M-350M
 - Cron jobs running in parallel
 - Rule of thumb: **2x** the number of concurrent PHP processes
 
+#### Database Connections Formula (Multi-Tenancy)
+When running multiple instances or predicting max connections for a shared load balancer:
+`DB_MAX_CONNECTIONS = (num_projects × avg_connections_per_app) + 20`
+Example: 30 projects × 3 connections = 90 + 20 = 110
+
 ---
 
 ## 4. Monitoring

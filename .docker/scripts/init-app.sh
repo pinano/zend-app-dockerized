@@ -32,3 +32,14 @@ if [ ! -f "$HEALTHCHECK_FILE" ]; then
 else
     echo "ℹ️  Healthcheck already exists at $HEALTHCHECK_FILE, skipping."
 fi
+
+# --- CRON ENVIRONMENT INJECTION ---
+# The vanilla 'cron' daemon strips out all Docker-injected environment variables.
+# We must manually dump them into /etc/environment so scheduled PHP scripts
+# can connect to MariaDB and respect the APP_ENV.
+if [ -n "$CRON_CPUS" ] || pgrep -f "cron" > /dev/null; then
+    echo "⚙️  Cron environment detected: Saving variables for scheduled tasks..."
+    # Export all variables except functions and shell-specifics
+    printenv | grep -v "no_proxy" | grep -v "HOSTNAME" | grep -v "PWD" > /etc/environment
+    echo "✅ /etc/environment populated with Docker variables."
+fi

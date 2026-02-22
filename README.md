@@ -21,7 +21,16 @@ A modernized Docker stack for running legacy Zend Framework 1.x applications, fe
     This will automatically copy `.env.dist` to `.env` if it doesn't exist and start the containers.
 
 2.  **Access the Application**
-    The application is configured behind Traefik. Access it via your configured Traefik domain (e.g., `http://app-project.localhost`).
+    The application is configured to run behind Traefik (a reverse proxy).
+    
+    **If you have Traefik running on your host:**
+    1. Ensure Traefik has an external Docker network named `traefik`.
+    2. Access the app via your configured domain (e.g., `http://app-project.localhost`).
+    
+    **If you DON'T have Traefik:**
+    1. Comment out the `traefik` network block in `docker-compose.yml`.
+    2. Map the app's port explicitly (`ports: ["8080:8080"]`).
+    3. Access the app via: `http://127.0.0.1:8080`.
 
 3.  **Database Access**
     Connect specifically to the MariaDB console:
@@ -66,6 +75,8 @@ You can enable additional stack features for specific legacy applications via `.
 ```
 .
 ├── .docker/            # Docker configuration files (Apache, PHP, Scripts)
+│   └── scripts/        
+│       └── init-app.sh # Bootstrapper: Rebuilds /tmp structure automatically & generates healthcheck.php
 ├── docs/               # Guides (APP_ENV, Cron, Redis, Sizing)
 ├── docroot/            # Application source code
 ├── mariadb_data/       # Persistent database storage

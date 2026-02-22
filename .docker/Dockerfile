@@ -16,7 +16,7 @@ USER root
 # 2. Use find to reassign ownership of existing files from the old ID (33) to the new one
 RUN usermod -u ${USER_ID} www-data && \
     groupmod -g ${GROUP_ID} www-data && \
-    find /var/www -user 33 -exec chown -h www-data {} \; || true
+    [ -d "/var/www" ] && find /var/www -user 33 -exec chown -h www-data {} \; || true
 # -----------------
 
 # --- APP INITIALIZATION ---

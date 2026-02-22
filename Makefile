@@ -59,12 +59,16 @@ build:
 .PHONY: db
 db:
 	@echo "🔌 Connecting to database..."
-	@docker compose exec db sh -c 'mariadb -u $${MARIADB_USER} -p$${MARIADB_PASSWORD} $${MARIADB_DATABASE}'
+	@docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
 define set_env
-	@sed -i.bak 's/^$(1)=.*/$(1)=$(2)/' .env && rm -f .env.bak
+	@if [ "$$(uname)" = "Darwin" ]; then \
+		sed -i '' 's/^$(1)=.*/$(1)=$(2)/' .env; \
+	else \
+		sed -i 's/^$(1)=.*/$(1)=$(2)/' .env; \
+	fi
 endef
 
 .PHONY: _ensure_env
@@ -87,8 +91,10 @@ size-small: _ensure_env
 	$(call set_env,DB_MEMORY,512M)
 	$(call set_env,DB_MEMORY_RESERVATION,128M)
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,128M)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,32M)
 	$(call set_env,DB_MAX_CONNECTIONS,50)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,128)
+	$(call set_env,PHP_REALPATH_CACHE_SIZE,32M)
 	@echo "✅ SMALL profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-medium
@@ -104,8 +110,10 @@ size-medium: _ensure_env
 	$(call set_env,DB_MEMORY,1G)
 	$(call set_env,DB_MEMORY_RESERVATION,256M)
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,256M)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,64M)
 	$(call set_env,DB_MAX_CONNECTIONS,100)
-	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,256)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
+	$(call set_env,PHP_REALPATH_CACHE_SIZE,64M)
 	@echo "✅ MEDIUM profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-large
@@ -121,8 +129,10 @@ size-large: _ensure_env
 	$(call set_env,DB_MEMORY,2G)
 	$(call set_env,DB_MEMORY_RESERVATION,512M)
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,512M)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,128M)
 	$(call set_env,DB_MAX_CONNECTIONS,300)
-	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,1024)
+	$(call set_env,PHP_REALPATH_CACHE_SIZE,128M)
 	@echo "✅ LARGE profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-show
@@ -131,6 +141,6 @@ size-show: _ensure_env
 	@echo "─────────────────────────────────"
 	@echo "  App:   CPU=$$(grep '^APP_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^APP_MEMORY=' .env | cut -d= -f2)"
 	@echo "  Cron:  CPU=$$(grep '^CRON_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^CRON_MEMORY=' .env | cut -d= -f2)"
-	@echo "  DB:    CPU=$$(grep '^DB_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2)  BufferPool=$$(grep '^DB_INNODB_BUFFER_POOL_SIZE=' .env | cut -d= -f2)  MaxConn=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2)"
-	@echo "  PHP:   OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB"
+	@echo "  DB:    CPU=$$(grep '^DB_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2)  BufferPool=$$(grep '^DB_INNODB_BUFFER_POOL_SIZE=' .env | cut -d= -f2)  LogFile=$$(grep '^DB_INNODB_LOG_FILE_SIZE=' .env | cut -d= -f2)  MaxConn=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2)"
+	@echo "  PHP:   OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB  Realpath=$$(grep '^PHP_REALPATH_CACHE_SIZE=' .env | cut -d= -f2)"
 	@echo "─────────────────────────────────"
