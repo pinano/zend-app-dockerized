@@ -23,11 +23,13 @@ help:
 	@echo "  config        Validate Docker Compose configuration"
 	@echo "  db            Connect to MariaDB console"
 	@echo "  ctop          Monitor containers using ctop"
-	@echo ""
-	@echo "Redis Management:"
-	@echo "  redis-info    Show Redis server statistics"
-	@echo "  redis-monitor Monitor Redis commands in real-time"
-	@echo "  redis-ping    Ping Redis server"
+	@if docker compose config --services 2>/dev/null | grep -q 'redis'; then \
+		echo ""; \
+		echo "Redis Management:"; \
+		echo "  redis-info    Show Redis server statistics"; \
+		echo "  redis-monitor Monitor Redis commands in real-time"; \
+		echo "  redis-ping    Ping Redis server"; \
+	fi
 	@echo ""
 	@echo "Cron Management:"
 	@echo "  crontab-init Create example crontab file"
@@ -76,6 +78,7 @@ validate:
 		echo "⚠️  WARNING: DB_ROOT_PASS is using default password!" || true
 	@grep -q "^SFTP_PASS=sftppass" .env && \
 		echo "⚠️  WARNING: SFTP_PASS is using default password!" || true
+	@echo "✅ Validation passed successfully!"
 
 .PHONY: stop
 stop:
