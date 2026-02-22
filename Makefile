@@ -189,7 +189,7 @@ crontab-init:
 	@if [ ! -f .docker/scripts/crontab ]; then \
 		mkdir -p .docker/scripts; \
 		echo "# m h dom mon dow user  command" > .docker/scripts/crontab; \
-		echo "# * * * * * root php /var/www/html/scripts/cron.php" >> .docker/scripts/crontab; \
+		echo "# * * * * * www-data php /var/www/html/scripts/cron.php" >> .docker/scripts/crontab; \
 		echo "✅ Created example crontab at .docker/scripts/crontab"; \
 	else \
 		echo "ℹ️  crontab file already exists."; \
