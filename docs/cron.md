@@ -47,7 +47,38 @@ Minute Hour DayOfMonth Month DayOfWeek  USERNAME  Command_To_Execute
 
 ---
 
-## 3. Debugging (Troubleshooting)
+## 3. Best Practices: Executing Application Logic
+
+When you need a cronjob to trigger logic within your own application (e.g., hitting a URL to process a queue), there are two approaches. **Approach 2 is highly recommended.**
+
+### ❌ Approach 1: HTTP Requests (Not Recommended)
+If you attempt to use `curl` against your public domain (`curl https://mydomain.com/cronjob.php`), the request will exit the Docker network, hit the public internet/host firewall, and route back through Traefik. This often fails due to Hairpin NAT/Loopback restrictions and adds unnecessary SSL overhead.
+
+If you absolutely must use HTTP, hit the `app` container directly via the internal Docker network. It's fast and bypasses firewalls. If your application routing strictly requires the public domain name to function, you can spoof the `Host` header:
+```text
+# Internal network request (bypasses SSL and public DNS)
+* * * * * www-data curl -s http://app:8080/cronjob.php
+
+# Internal network request spoofing the public hostname
+* * * * * www-data curl -s -H "Host: mydomain.com" http://app:8080/cronjob.php
+```
+
+### ✅ Approach 2: Pure CLI Execution (Ideal)
+The most efficient method is to execute the PHP file directly using the CLI interpreter. The `cron` container already has your application code mounted in `/var/www/html`.
+
+```text
+# Pure CLI execution (No Apache/FPM overhead)
+* * * * * www-data php /var/www/html/public/cronjob.php
+```
+
+**Benefits of CLI execution:**
+1. Zero HTTP overhead (no Apache workers consumed).
+2. The script bypasses web `PHP_MAX_EXECUTION_TIME` limits.
+3. Your access logs remain clean from repetitive internal cron requests.
+
+---
+
+## 4. Debugging (Troubleshooting)
 
 Since Cron tasks happen in the background, it can be complex to spot errors if, for example, a PHP script fails or is missing a dependency.
 
