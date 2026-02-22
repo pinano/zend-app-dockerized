@@ -39,7 +39,14 @@ fi
 # can connect to MariaDB and respect the APP_ENV.
 if [ "$IS_CRON" = "1" ]; then
     echo "⚙️  Cron environment detected: Saving variables for scheduled tasks..."
-    # Export all variables except functions and shell-specifics
-    printenv | grep -v "no_proxy" | grep -v "HOSTNAME" | grep -v "PWD" > /etc/environment
+    # Export critical variables explicitly to guarantee connectivity
+    {
+        echo "export DB_HOST=${DB_HOST}"
+        echo "export DB_NAME=${DB_NAME}"
+        echo "export DB_USER=${DB_USER}"
+        echo "export DB_PASS=${DB_PASS}"
+        echo "export APP_ENV=${APP_ENV}"
+        printenv | grep -v "no_proxy" | grep -v "HOSTNAME" | grep -v "PWD"
+    } > /etc/environment
     echo "✅ /etc/environment populated with Docker variables."
 fi

@@ -22,11 +22,12 @@ help:
 	@echo "  size-show    Show current sizing configuration"
 
 .PHONY: start
-start: validate-env
+start:
 	@if [ ! -f .env ]; then \
 		echo "⚠️  .env file not found, creating one from .env.dist..."; \
 		cp .env.dist .env; \
 	fi
+	@$(MAKE) validate-env
 	@echo "🐳 Starting containers..."
 	@docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
@@ -34,6 +35,10 @@ start: validate-env
 .PHONY: validate-env
 validate-env:
 	@echo "Validating .env configuration..."
+	@[ -n "$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1)
+	@[ -n "$$(grep '^DB_NAME=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: DB_NAME is not set!"; exit 1)
 	@grep -q "^DB_PASS=dbrootpass" .env && \
 		echo "⚠️  WARNING: DB_PASS is using default password!" || true
 	@grep -q "^SFTP_PASS=sftppass" .env && \
@@ -46,7 +51,15 @@ stop:
 	@echo "✅ Stack is down!"
 
 .PHONY: restart
-restart: stop start
+restart:
+	@echo "🔄 Restarting stack..."
+	@$(MAKE) stop
+	@if $(MAKE) validate-env; then \
+		$(MAKE) start; \
+	else \
+		echo "❌ Validation failed. Not starting."; \
+		exit 1; \
+	fi
 
 .PHONY: logs
 logs:
@@ -100,6 +113,7 @@ size-small: _ensure_env
 	$(call set_env,CRON_CPUS,0.1)
 	$(call set_env,CRON_MEMORY,128M)
 	$(call set_env,CRON_MEMORY_RESERVATION,32M)
+	$(call set_env,CRON_TMPFS_SIZE,64M)
 	$(call set_env,DB_CPUS,1.0)
 	$(call set_env,DB_MEMORY,512M)
 	$(call set_env,DB_MEMORY_RESERVATION,128M)
@@ -121,6 +135,7 @@ size-medium: _ensure_env
 	$(call set_env,CRON_CPUS,0.25)
 	$(call set_env,CRON_MEMORY,256M)
 	$(call set_env,CRON_MEMORY_RESERVATION,64M)
+	$(call set_env,CRON_TMPFS_SIZE,128M)
 	$(call set_env,DB_CPUS,2.0)
 	$(call set_env,DB_MEMORY,1G)
 	$(call set_env,DB_MEMORY_RESERVATION,256M)
@@ -128,7 +143,7 @@ size-medium: _ensure_env
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,64M)
 	$(call set_env,DB_MAX_CONNECTIONS,100)
 	$(call set_env,PHP_MEMORY_LIMIT,256M)
-	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,256)
 	$(call set_env,APP_TMPFS_SIZE,256M)
 	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,64M) # Currently not available in serversideup images
 	@echo "✅ MEDIUM profile applied. Run 'make restart' to apply changes."
@@ -142,6 +157,7 @@ size-large: _ensure_env
 	$(call set_env,CRON_CPUS,0.5)
 	$(call set_env,CRON_MEMORY,512M)
 	$(call set_env,CRON_MEMORY_RESERVATION,128M)
+	$(call set_env,CRON_TMPFS_SIZE,256M)
 	$(call set_env,DB_CPUS,4.0)
 	$(call set_env,DB_MEMORY,2G)
 	$(call set_env,DB_MEMORY_RESERVATION,512M)
@@ -149,7 +165,7 @@ size-large: _ensure_env
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,128M)
 	$(call set_env,DB_MAX_CONNECTIONS,300)
 	$(call set_env,PHP_MEMORY_LIMIT,512M)
-	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,1024)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
 	$(call set_env,APP_TMPFS_SIZE,512M)
 	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,128M) # Currently not available in serversideup images
 	@echo "✅ LARGE profile applied. Run 'make restart' to apply changes."
@@ -163,3 +179,14 @@ size-show: _ensure_env
 	@echo "  DB:    CPU=$$(grep '^DB_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2)  BufferPool=$$(grep '^DB_INNODB_BUFFER_POOL_SIZE=' .env | cut -d= -f2)  LogFile=$$(grep '^DB_INNODB_LOG_FILE_SIZE=' .env | cut -d= -f2)  MaxConn=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2)"
 	@echo "  PHP:   MemLimit=$$(grep '^PHP_MEMORY_LIMIT=' .env | cut -d= -f2)  OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB"
 	@echo "─────────────────────────────────"
+
+.PHONY: crontab-init
+crontab-init:
+	@if [ ! -f .docker/scripts/crontab ]; then \
+		mkdir -p .docker/scripts; \
+		echo "# m h dom mon dow user  command" > .docker/scripts/crontab; \
+		echo "# * * * * * root php /var/www/html/scripts/cron.php" >> .docker/scripts/crontab; \
+		echo "✅ Created example crontab at .docker/scripts/crontab"; \
+	else \
+		echo "ℹ️  crontab file already exists."; \
+	fi
