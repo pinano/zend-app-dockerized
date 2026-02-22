@@ -6,7 +6,7 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  start       Start the stack (creates .env if missing)"
+	@echo "  start       Start the stack (creates & validates .env if missing)"
 	@echo "  stop        Stop the stack and remove orphans"
 	@echo "  restart     Restart the stack"
 	@echo "  logs        Tail container logs"
@@ -14,6 +14,9 @@ help:
 	@echo "  config      Validate Docker Compose configuration"
 	@echo "  build       Rebuild the app container"
 	@echo "  db          Connect to MariaDB console"
+	@echo ""
+	@echo "Cron Management:"
+	@echo "  crontab-init Create example crontab file"
 	@echo ""
 	@echo "Sizing:"
 	@echo "  size-small   Configure .env for low-traffic app (< 500 visits/day)"
@@ -39,6 +42,10 @@ validate-env:
 		(echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1)
 	@[ -n "$$(grep '^DB_NAME=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: DB_NAME is not set!"; exit 1)
+	@[ -n "$$(grep '^DB_USER=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: DB_USER is not set!"; exit 1)
+	@[ -n "$$(grep '^DB_PASS=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: DB_PASS is not set!"; exit 1)
 	@grep -q "^DB_PASS=dbrootpass" .env && \
 		echo "⚠️  WARNING: DB_PASS is using default password!" || true
 	@grep -q "^SFTP_PASS=sftppass" .env && \
@@ -54,12 +61,7 @@ stop:
 restart:
 	@echo "🔄 Restarting stack..."
 	@$(MAKE) stop
-	@if $(MAKE) validate-env; then \
-		$(MAKE) start; \
-	else \
-		echo "❌ Validation failed. Not starting."; \
-		exit 1; \
-	fi
+	@$(MAKE) start
 
 .PHONY: logs
 logs:
@@ -174,8 +176,8 @@ size-large: _ensure_env
 size-show: _ensure_env
 	@echo "📊 Current sizing configuration:"
 	@echo "─────────────────────────────────"
-	@echo "  App:   CPU=$$(grep '^APP_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^APP_MEMORY=' .env | cut -d= -f2)"
-	@echo "  Cron:  CPU=$$(grep '^CRON_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^CRON_MEMORY=' .env | cut -d= -f2)"
+	@echo "  App:   CPU=$$(grep '^APP_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^APP_MEMORY=' .env | cut -d= -f2)  Tmpfs=$$(grep '^APP_TMPFS_SIZE=' .env | cut -d= -f2)"
+	@echo "  Cron:  CPU=$$(grep '^CRON_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^CRON_MEMORY=' .env | cut -d= -f2)  Tmpfs=$$(grep '^CRON_TMPFS_SIZE=' .env | cut -d= -f2)"
 	@echo "  DB:    CPU=$$(grep '^DB_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2)  BufferPool=$$(grep '^DB_INNODB_BUFFER_POOL_SIZE=' .env | cut -d= -f2)  LogFile=$$(grep '^DB_INNODB_LOG_FILE_SIZE=' .env | cut -d= -f2)  MaxConn=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2)"
 	@echo "  PHP:   MemLimit=$$(grep '^PHP_MEMORY_LIMIT=' .env | cut -d= -f2)  OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB"
 	@echo "─────────────────────────────────"

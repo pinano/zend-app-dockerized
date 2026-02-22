@@ -38,15 +38,7 @@ fi
 # We must manually dump them into /etc/environment so scheduled PHP scripts
 # can connect to MariaDB and respect the APP_ENV.
 if [ "$IS_CRON" = "1" ]; then
-    echo "⚙️  Cron environment detected: Saving variables for scheduled tasks..."
-    # Export critical variables explicitly to guarantee connectivity
-    {
-        echo "export DB_HOST=${DB_HOST}"
-        echo "export DB_NAME=${DB_NAME}"
-        echo "export DB_USER=${DB_USER}"
-        echo "export DB_PASS=${DB_PASS}"
-        echo "export APP_ENV=${APP_ENV}"
-        printenv | grep -v "no_proxy" | grep -v "HOSTNAME" | grep -v "PWD"
-    } > /etc/environment
-    echo "✅ /etc/environment populated with Docker variables."
+    echo "⚙️  Saving environment variables to /etc/environment for cron daemon..."
+    printenv | grep -v "no_proxy" | grep -v "HOSTNAME" | grep -v "PWD" > /etc/environment
+    echo "✅ Created /etc/environment with Docker variables."
 fi
