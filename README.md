@@ -55,7 +55,7 @@ For detailed sizing profiles (Small/Medium/Large) and capacity planning, see the
 
 You can enable additional stack features for specific legacy applications via `.env` or configuration files:
 
-- **Optional Redis Cache**: Add `COMPOSE_PROFILES=redis` to your `.env` to automatically start a lightweight Redis container. **[Read the Full Redis Integration Guide here](docs/redis.md).**
+- **Optional Redis Cache**: Add `COMPOSE_PROFILES=redis` to your `.env` to automatically start a lightweight Redis container (powered by Valkey). **[Read the Full Redis Integration Guide here](docs/redis.md).**
 - **Xdebug for Local Dev**: Set `PHP_EXTENSION_XDEBUG=1` in your `.env`. Keep it disabled in production.
 - **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `.docker/scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
 - **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `.docker/php/custom.ini` without modifying the core image.
@@ -96,4 +96,4 @@ You can enable additional stack features for specific legacy applications via `.
 - **cron**: CLI container to run scheduled tasks.
 - **db**: MariaDB 12.1.2.
 - **sftp**: Secure file transfer (atmoz/sftp), restricted to localhost.
-- **redis** (Optional): In-memory cache store.
+- **redis** (Optional): In-memory cache store (Powered by Valkey).

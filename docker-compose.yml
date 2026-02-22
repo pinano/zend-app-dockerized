@@ -196,12 +196,12 @@ services:
     networks:
       - backnet
 
-  # --- Optional Redis Cache (requires COMPOSE_PROFILES=redis) ---
+  # --- Optional Redis Cache (Powered by Valkey, requires COMPOSE_PROFILES=redis) ---
   redis:
-    image: redis:7.2-alpine
+    image: valkey/valkey:9.0.1-alpine
     container_name: ${PROJECT_NAME}-redis
     profiles: [ "redis" ]
-    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: valkey-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     deploy:
       resources:
         limits:
@@ -210,7 +210,7 @@ services:
         reservations:
           memory: 64M
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: [ "CMD", "valkey-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5

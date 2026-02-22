@@ -1,12 +1,12 @@
-# Redis Integration with Zend Framework 1.x
+# Redis Integration with Zend Framework 1.x (Powered by Valkey)
 
-The current Docker stack includes an optional Redis service (`redis:7.2-alpine`) prepared for high-traffic environments. Redis runs entirely in RAM, offering sub-millisecond response times, which is ideal for storing caches and user sessions, relieving the load on MariaDB and the hard drive.
+The current Docker stack includes an optional Redis-compatible service (powered by `valkey/valkey:7.2-alpine`) prepared for high-traffic environments. Valkey is a drop-in replacement for Redis that runs entirely in RAM, offering sub-millisecond response times, which is ideal for storing caches and user sessions, relieving the load on MariaDB and the hard drive. All interactions with this container use the standard Redis nomenclature and protocols.
 
 ---
 
 ## 1. Enabling the Redis Container
 
-By default, Redis **is not initialized** to save resources in small projects. To enable it in your project, you must use Docker Profiles.
+By default, the Redis container **is not initialized** to save resources in small projects. To enable it in your project, you must use Docker Profiles.
 
 1. Open your `.env` file.
 2. Find the `COMPOSE_PROFILES` variable and set it to `redis`:
@@ -28,7 +28,7 @@ Zend Framework 1.x has the `Zend_Cache` component which can be adapted to use Re
 
 ### Use Case A: Application Cache (Zend_Cache)
 
-To use Redis as a caching backend, a widely used community library called `Cm_Cache_Backend_Redis` is commonly used (very popular in Magento 1 and ZF1 ecosystems).
+To use Redis as a caching backend, a widely used community library called `Cm_Cache_Backend_Redis` is commonly used (very popular in Magento 1 and ZF1 ecosystems). Since Valkey is fully compatible with the Redis protocol, this works seamlessly.
 
 In your `application/configs/application.ini` file, the configuration to hook this backend would be as follows:
 
@@ -41,7 +41,7 @@ resources.cachemanager.general.frontend.options.automatic_serialization = true
 ; Redis backend configuration
 resources.cachemanager.general.backend.name                             = "Cm_Cache_Backend_Redis"
 
-; IMPORTANT: The server must point to the service name in the docker-compose
+; IMPORTANT: The server must point to the service name in the docker-compose (redis)
 resources.cachemanager.general.backend.options.server                   = "redis" 
 resources.cachemanager.general.backend.options.port                     = "6379"
 ```
@@ -85,3 +85,4 @@ phpSettings.session.gc_maxlifetime  = 86400
 ```
 
 With this simple configuration change, user logins and navigation will be processed instantly through the in-memory Redis service.
+
