@@ -6,14 +6,28 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  start       Start the stack (creates & validates .env if missing)"
-	@echo "  stop        Stop the stack and remove orphans"
-	@echo "  restart     Restart the stack"
-	@echo "  logs        Tail container logs"
-	@echo "  shell       Open a shell in the app container"
-	@echo "  config      Validate Docker Compose configuration"
-	@echo "  build       Rebuild the app container"
-	@echo "  db          Connect to MariaDB console"
+	@echo "  help          Show this help message"
+	@echo "  init          Initialize environment (.env)"
+	@echo "  start         Start the stack (creates & validates .env if missing)"
+	@echo "  stop          Stop the stack and remove orphans"
+	@echo "  restart       Restart the stack"
+	@echo "  rebuild       Rebuild services from Dockerfile (usage: make rebuild [service])"
+	@echo "  status        Show stack status (docker compose ps)"
+	@echo "  services      List available services"
+	@echo "  validate      Validate .env against minimum requirements"
+	@echo "  sync          Synchronize .env with .env.dist (Add missing keys)"
+	@echo "  logs          Follow logs for all containers or a specific service (usage: make logs [service])"
+	@echo "  shell         Open a shell in a container (usage: make shell [service], default: app)"
+	@echo "  pull          Pull latest images"
+	@echo "  clean         Clean up everything, removing volumes (Requires confirmation)"
+	@echo "  config        Validate Docker Compose configuration"
+	@echo "  db            Connect to MariaDB console"
+	@echo "  ctop          Monitor containers using ctop"
+	@echo ""
+	@echo "Redis Management:"
+	@echo "  redis-info    Show Redis server statistics"
+	@echo "  redis-monitor Monitor Redis commands in real-time"
+	@echo "  redis-ping    Ping Redis server"
 	@echo ""
 	@echo "Cron Management:"
 	@echo "  crontab-init Create example crontab file"
@@ -24,19 +38,29 @@ help:
 	@echo "  size-large   Configure .env for high-traffic app (> 5000 visits/day)"
 	@echo "  size-show    Show current sizing configuration"
 
+.PHONY: init
+init:
+	@if [ ! -f .env ]; then \
+		echo "⚙️  Initializing .env from .env.dist..."; \
+		cp .env.dist .env; \
+		echo "✅ .env created. Please review variables before starting."; \
+	else \
+		echo "ℹ️  .env already exists."; \
+	fi
+
 .PHONY: start
 start:
 	@if [ ! -f .env ]; then \
 		echo "⚠️  .env file not found, creating one from .env.dist..."; \
 		cp .env.dist .env; \
 	fi
-	@$(MAKE) validate-env
+	@$(MAKE) validate
 	@echo "🐳 Starting containers..."
 	@docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
 
-.PHONY: validate-env
-validate-env:
+.PHONY: validate
+validate:
 	@echo "Validating .env configuration..."
 	@[ -n "$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1)
@@ -65,26 +89,82 @@ restart:
 	@$(MAKE) stop
 	@$(MAKE) start
 
+.PHONY: status
+status:
+	@docker compose ps
+
+.PHONY: services
+services:
+	@docker compose config --services
+
+.PHONY: sync
+sync:
+	@echo "🔄 Synchronizing .env with .env.dist..."
+	@awk -F= '!/^#/ && NF>0 {print $$1}' .env.dist | while read key; do \
+		if ! grep -q "^$$key=" .env; then \
+			value=$$(grep "^$$key=" .env.dist | cut -d= -f2-); \
+			echo "$$key=$$value" >> .env; \
+			echo "➕ Added missing key: $$key"; \
+		fi \
+	done
+	@echo "✅ Sync complete."
+
 .PHONY: logs
 logs:
-	@docker compose logs -f
+	@docker compose logs -f $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: shell
 shell:
-	@docker compose exec app /bin/bash 2>/dev/null || docker compose exec app /bin/sh
+	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
+	if [ -z "$$SERVICE" ]; then SERVICE="app"; fi; \
+	docker compose exec $$SERVICE /bin/bash 2>/dev/null || docker compose exec $$SERVICE /bin/sh
+
+.PHONY: pull
+pull:
+	@docker compose pull
+
+.PHONY: clean
+clean:
+	@read -p "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Area you sure? [y/N] " ans && \
+	if [ $${ans:-N} = y ]; then \
+		docker compose down -v --remove-orphans; \
+		echo "🧹 Clean complete."; \
+	else \
+		echo "Aborting clean."; \
+	fi
 
 .PHONY: config
 config:
 	@docker compose config
 
-.PHONY: build
-build:
-	@docker compose build
+.PHONY: rebuild
+rebuild:
+	@docker compose build $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: db
 db:
 	@echo "🔌 Connecting to database..."
 	@docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'
+
+.PHONY: ctop
+ctop:
+	@docker run --rm -ti \
+		--name=ctop \
+		--volume /var/run/docker.sock:/var/run/docker.sock:ro \
+		quay.io/vektorlab/ctop:latest
+
+.PHONY: redis-info
+redis-info:
+	@docker compose exec redis valkey-cli info
+
+.PHONY: redis-monitor
+redis-monitor:
+	@echo "📡 Monitoring Redis commands... (Press Ctrl+C to stop)"
+	@docker compose exec redis valkey-cli monitor
+
+.PHONY: redis-ping
+redis-ping:
+	@docker compose exec redis valkey-cli ping
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
@@ -194,3 +274,7 @@ crontab-init:
 	else \
 		echo "ℹ️  crontab file already exists."; \
 	fi
+
+# Catch-all target for positional arguments
+%:
+	@:

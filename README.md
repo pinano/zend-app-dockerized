@@ -90,13 +90,26 @@ You can enable additional stack features for specific legacy applications via `.
 
 | Command | Description |
 |---------|-------------|
-| `make start` | Start the stack (and create .env) |
+| `make help` | Show all available commands |
+| `make init` | Initialize environment (.env) |
+| `make start` | Start the stack (creates/validates .env) |
 | `make stop` | Stop the stack and cleanup orphans |
 | `make restart` | Restart all containers |
-| `make logs` | View container logs |
-| `make shell` | Access the app container shell |
+| `make rebuild <svr>` | Rebuild all or specific service |
+| `make status` | Show stack status (`docker compose ps`) |
+| `make services` | List available services |
+| `make validate` | Validate `.env` against minimum requirements |
+| `make sync` | Synchronize `.env` with `.env.dist` (Add missing keys) |
+| `make logs <svr>` | View container logs (all or specific) |
+| `make shell <svr>` | Access container shell (defaults to `app`) |
+| `make pull` | Pull latest images |
+| `make clean` | Clean configs and volumes (requires confirmation) |
 | `make db` | Access the database console |
 | `make config` | Validate Docker Compose config |
+| `make ctop` | Monitor containers using ctop |
+| `make redis-info` | Show Redis server statistics |
+| `make redis-monitor`| Monitor Redis commands in real-time |
+| `make redis-ping`   | Ping Redis server |
 | `make crontab-init` | Create example crontab file |
 | `make size-small` | Apply Small sizing profile |
 | `make size-medium` | Apply Medium sizing profile |
