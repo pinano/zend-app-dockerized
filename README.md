@@ -66,6 +66,7 @@ You can enable additional stack features for specific legacy applications via `.
 ```
 .
 ├── .docker/            # Docker configuration files (Apache, PHP, Scripts)
+├── docs/               # Guides (APP_ENV, Cron, Redis, Sizing)
 ├── docroot/            # Application source code
 ├── mariadb_data/       # Persistent database storage
 ├── .env                # Environment variables
@@ -84,6 +85,10 @@ You can enable additional stack features for specific legacy applications via `.
 | `make shell` | Access the app container shell |
 | `make db` | Access the database console |
 | `make config` | Validate Docker Compose config |
+| `make size-small` | Apply Small sizing profile |
+| `make size-medium` | Apply Medium sizing profile |
+| `make size-large` | Apply Large sizing profile |
+| `make size-show` | Show current sizing config |
 
 ## Services
 

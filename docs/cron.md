@@ -20,29 +20,29 @@ Everything you write in that file will be interpreted and executed by the cron d
 
 The `.docker/scripts/crontab` file is dynamically mapped to the system inside the path `/etc/cron.d/app-cron`.
 
-⚠️ **Golden rule exclusive to the `cron.d` format**: Do not include the operating system user that will execute it! The `serversideup` Docker image manager natively injects the correct user (using the `USER_ID` variable from the `.env` file). You only need the time expression and the actual command.
+⚠️ **Important**: Files under `/etc/cron.d/` **require the username field** after the schedule columns. Always use `www-data` to match the application's file permissions.
 
 ### Expected Format:
 ```text
-Minute Hour DayOfMonth Month DayOfWeek  Command_To_Execute
+Minute Hour DayOfMonth Month DayOfWeek  USERNAME  Command_To_Execute
 ```
 
 ### Practical Examples
 
 **1. Execute a specific PHP script every day at 3:00 AM:**
 ```text
-0 3 * * * php /var/www/html/scripts/daily-report.php
+0 3 * * * www-data php /var/www/html/scripts/daily-report.php
 ```
 
 **2. Execute a Zend Framework database session cleanup every 15 minutes:**
 ```text
-*/15 * * * * php /var/www/html/public/index.php crontab cleanup-sessions
+*/15 * * * * www-data php /var/www/html/public/index.php crontab cleanup-sessions
 ```
 *(Note: This specific example would depend on your console implementation in your ZF1 application's entrypoint).*
 
 **3. Execute a system console command (e.g., empty the ZF1 temp folder) on Sunday nights:**
 ```text
-0 0 * * 0 rm -rf /var/www/html/tmp/cache/*
+0 0 * * 0 www-data rm -rf /var/www/html/tmp/cache/*
 ```
 
 ---
@@ -64,5 +64,5 @@ If a script is giving you headaches, you can always manually rewrite the command
 
 ```text
 # Overwrite errors to a local log visible from your IDE
-* * * * * php /var/www/html/scripts/test.php >> /var/www/html/cron-record.log 2>&1
+* * * * * www-data php /var/www/html/scripts/test.php >> /var/www/html/cron-record.log 2>&1
 ```

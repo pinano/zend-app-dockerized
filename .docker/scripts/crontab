@@ -1,13 +1,17 @@
 # -----------------------------------------
 # Application Scheduled Tasks (Cronjobs)
 # -----------------------------------------
-# Define scheduled tasks below. This file is loaded automatically by the `cron` service.
-# DO NOT include the username column here -> the cron service maps it natively 
-# to run as the configured user under `/etc/cron.d/`.
+# Define scheduled tasks below. This file is loaded automatically by the `cron` service
+# and mounted to /etc/cron.d/app-cron inside the container.
+#
+# FORMAT: Files in /etc/cron.d/ REQUIRE the username field after the schedule:
+#   minute hour day month weekday USERNAME command
+#
+# Use 'www-data' as the user to match the application's file permissions.
 #
 # Examples:
-# * * * * * php /var/www/html/public/index.php crontab module action
-# 0 0 * * * php /var/www/html/scripts/daily-cleanup.php
+# * * * * * www-data php /var/www/html/public/index.php crontab module action
+# 0 0 * * * www-data php /var/www/html/scripts/daily-cleanup.php
 
 # IMPORTANT: This file MUST end with a blank line (newline after the last entry).
 # Otherwise, cron may silently ignore the last scheduled task.

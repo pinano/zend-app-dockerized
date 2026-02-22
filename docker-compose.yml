@@ -40,7 +40,6 @@ services:
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
       APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
       APACHE_LOG_LEVEL: ${APACHE_LOG_LEVEL:-warn}
-      HEALTHCHECK_PATH: ${HEALTHCHECK_PATH:-/healthcheck.php}
       # PHP
       PHP_EXTENSION_XDEBUG: ${PHP_EXTENSION_XDEBUG:-0}
       PHP_ERROR_REPORTING: ${PHP_ERROR_REPORTING:-E_ALL & ~E_NOTICE & ~E_DEPRECATED}
@@ -215,6 +214,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
     restart: unless-stopped
     networks:
       - backnet

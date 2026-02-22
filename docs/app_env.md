@@ -41,3 +41,18 @@ define('APPLICATION_ENV', (getenv('APP_ENV') ? getenv('APP_ENV') : 'production')
 ```
 
 By making this small change, your container's `APP_ENV` variable (defined in `.env`) will act as the single source of truth, synchronizing the server's error reporting with Zend Framework's internal environment!
+
+---
+
+## 3. OPcache Settings for Development
+
+When switching to `APP_ENV=development`, you should also adjust the OPcache settings in your `.env` file to allow live code editing without container restarts:
+
+```ini
+APP_ENV=development
+PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
+PHP_OPCACHE_REVALIDATE_FREQ=0
+PHP_EXTENSION_XDEBUG=1
+```
+
+This makes PHP recheck files on every request, so code changes are visible instantly. **Remember to revert these settings in production** (the `.env.dist` defaults are already optimized for production).

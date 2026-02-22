@@ -1,4 +1,4 @@
-# Delcare default PHP version before FROM
+# Declare default PHP version before FROM
 ARG PHP_VERSION=7.4
 
 # Choose our base image
