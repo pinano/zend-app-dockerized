@@ -38,7 +38,7 @@ fi
 # We must manually dump them into /etc/environment so scheduled PHP scripts
 # can connect to MariaDB and respect the APP_ENV.
 if [ "$IS_CRON" = "1" ]; then
-    echo "⚙️  Saving environment variables to /etc/environment for cron daemon..."
+    echo "⚙️  Saving environment variables to /etc/environment (cron daemon requires explicit env exports)..."
     {
         echo "export DB_HOST=${DB_HOST}"
         echo "export DB_NAME=${DB_NAME}"
