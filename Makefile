@@ -100,14 +100,7 @@ services:
 .PHONY: sync
 sync:
 	@echo "🔄 Synchronizing .env with .env.dist..."
-	@awk -F= '!/^#/ && NF>0 {print $$1}' .env.dist | while read key; do \
-		if ! grep -q "^$$key=" .env; then \
-			value=$$(grep "^$$key=" .env.dist | cut -d= -f2-); \
-			echo "$$key=$$value" >> .env; \
-			echo "➕ Added missing key: $$key"; \
-		fi \
-	done
-	@echo "✅ Sync complete."
+	@python3 .docker/scripts/sync-env.py
 
 .PHONY: logs
 logs:
