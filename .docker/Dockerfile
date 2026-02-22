@@ -19,11 +19,11 @@ RUN usermod -u ${USER_ID} www-data && \
     find /var/www -user 33 -exec chown -h www-data {} \; || true
 # -----------------
 
-# --- ZEND TMP STRUCTURE ---
+# --- APP INITIALIZATION ---
 # Copy the initialization script to run on startup
-# This is necessary because we will use tmpfs for /var/www/html/tmp
-COPY .docker/scripts/init-tmp-dirs.sh /etc/entrypoint.d/99-init-tmp-dirs.sh
-RUN chmod +x /etc/entrypoint.d/99-init-tmp-dirs.sh
+# Creates tmpfs directory structure and auto-generates healthcheck.php
+COPY .docker/scripts/init-app.sh /etc/entrypoint.d/99-init-app.sh
+RUN chmod +x /etc/entrypoint.d/99-init-app.sh
 # -----------------
 
 # Install required PHP extensions with root permissions

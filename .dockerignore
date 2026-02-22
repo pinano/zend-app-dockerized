@@ -10,6 +10,10 @@ Makefile
 *.md
 docs/
 
+# Config files mounted as volumes at runtime (not needed in the image)
+.docker/apache/
+.docker/php/
+
 # Application and Data (Mounted as volumes, shouldn't be baked into the image)
 mariadb_data/
 docroot/

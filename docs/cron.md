@@ -6,7 +6,7 @@ The Docker stack includes a dedicated service named `cron` configured to execute
 
 ## 1. How Does It Work?
 
-The `cron` service is based on the official `serversideup/php-cli` image. Since it doesn't have to start or configure Apache, it is much faster and lighter.
+The `cron` service uses a lightweight `serversideup/php` CLI image (`.docker/Dockerfile.cron`), which does **not** include Apache or PHP-FPM. This makes it significantly lighter than the main `app` container (~150-200MB less RAM). The `cron` daemon is installed during the Docker build.
 It shares exactly the same network, the same volumes, and the same user as the main application, but its sole mission is to stay running consuming the `cron` daemon.
 
 The heart of the system is the text file:

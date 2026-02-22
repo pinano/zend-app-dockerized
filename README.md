@@ -49,6 +49,8 @@ The stack is designed to scale from small low-traffic sites to large application
 - **Database Resources**: Assign CPU and memory limits to MariaDB (`DB_CPUS`, `DB_MEMORY`).
 - **Database Tuning**: For high traffic, increase `DB_MAX_CONNECTIONS` and `DB_INNODB_BUFFER_POOL_SIZE` (crucial for InnoDB performance).
 
+For detailed sizing profiles (Small/Medium/Large) and capacity planning, see the **[Sizing Guide](docs/sizing.md)**.
+
 ### Advanced Stack Control
 
 You can enable additional stack features for specific legacy applications via `.env` or configuration files:

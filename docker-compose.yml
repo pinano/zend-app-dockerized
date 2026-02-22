@@ -40,9 +40,10 @@ services:
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
       APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
       APACHE_LOG_LEVEL: ${APACHE_LOG_LEVEL:-warn}
+      HEALTHCHECK_PATH: ${HEALTHCHECK_PATH:-/healthcheck.php}
       # PHP
       PHP_EXTENSION_XDEBUG: ${PHP_EXTENSION_XDEBUG:-0}
-      PHP_ERROR_REPORTING: E_ALL & ~E_NOTICE & E_WARNING & ~E_DEPRECATED
+      PHP_ERROR_REPORTING: ${PHP_ERROR_REPORTING:-E_ALL & ~E_NOTICE & ~E_DEPRECATED}
       PHP_POST_MAX_SIZE: ${PHP_POST_MAX_SIZE:-50M}
       PHP_UPLOAD_MAX_FILE_SIZE: ${PHP_UPLOAD_MAX_FILE_SIZE:-10M}
       PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-512M}
@@ -54,23 +55,24 @@ services:
       PHP_OPCACHE_ENABLE: 1
       PHP_OPCACHE_MEMORY_CONSUMPTION: ${PHP_OPCACHE_MEMORY_CONSUMPTION:-256}
       PHP_OPCACHE_MAX_ACCELERATED_FILES: ${PHP_OPCACHE_MAX_ACCELERATED_FILES:-20000}
-      PHP_OPCACHE_VALIDATE_TIMESTAMPS: 1
-      PHP_OPCACHE_REVALIDATE_FREQ: 0
+      PHP_OPCACHE_VALIDATE_TIMESTAMPS: ${PHP_OPCACHE_VALIDATE_TIMESTAMPS:-0}
+      PHP_OPCACHE_REVALIDATE_FREQ: ${PHP_OPCACHE_REVALIDATE_FREQ:-60}
       # Database
       DB_HOST: db
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASS}
     healthcheck:
-      test: [ "CMD-SHELL", "curl -f http://localhost:8080/healthcheck || exit 1" ]
-      interval: 30s
+      test: [ "CMD-SHELL", "curl -sf http://localhost:8080/healthcheck.php -o /dev/null || exit 1" ]
+      interval: ${HEALTHCHECK_INTERVAL:-60s}
       timeout: 5s
       retries: 3
+      start_period: ${HEALTHCHECK_START_PERIOD:-30s}
     logging:
       driver: "json-file"
       options:
-        max-size: "50m"
-        max-file: "3"
+        max-size: "10m"
+        max-file: "2"
     restart: unless-stopped
     networks:
       - traefik
@@ -87,16 +89,16 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${APP_CPUS:-1.0}'
-          memory: ${APP_MEMORY:-512M}
+          cpus: '${CRON_CPUS:-0.25}'
+          memory: ${CRON_MEMORY:-256M}
         reservations:
-          memory: ${APP_MEMORY_RESERVATION:-128M}
+          memory: ${CRON_MEMORY_RESERVATION:-64M}
     depends_on:
       db:
         condition: service_healthy
     build:
       context: .
-      dockerfile: .docker/Dockerfile
+      dockerfile: .docker/Dockerfile.cron
       args:
         - PHP_VERSION=${PHP_VERSION:-7.4}
         - USER_ID=${USER_ID:-1000}
@@ -135,9 +137,16 @@ services:
     container_name: ${PROJECT_NAME}-db
     command:
       - --default-authentication-plugin=mysql_native_password
-      - --max-connections=${DB_MAX_CONNECTIONS:-100} # Adjust based on traffic
-      - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-256M} # Adjust according to DB size
+      - --max-connections=${DB_MAX_CONNECTIONS:-100}
+      - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-256M}
       - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-64M}
+      - --innodb-flush-log-at-trx-commit=${DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT:-2}
+      - --innodb-flush-method=O_DIRECT
+      - --skip-name-resolve
+      - --join-buffer-size=256K
+      - --sort-buffer-size=256K
+      - --tmp-table-size=32M
+      - --max-heap-table-size=32M
     deploy:
       resources:
         limits:
@@ -153,8 +162,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "50m"
-        max-file: "3"
+        max-size: "10m"
+        max-file: "2"
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./mariadb_data:/var/lib/mysql
@@ -174,6 +183,11 @@ services:
   sftp:
     image: atmoz/sftp:alpine
     container_name: ${PROJECT_NAME}-sftp
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
     restart: unless-stopped
     ports:
       - "127.0.0.1:${SFTP_PORT}:22" # <--- Only accessible from the host itself

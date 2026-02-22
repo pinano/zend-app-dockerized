@@ -8,3 +8,7 @@
 # Examples:
 # * * * * * php /var/www/html/public/index.php crontab module action
 # 0 0 * * * php /var/www/html/scripts/daily-cleanup.php
+
+# IMPORTANT: This file MUST end with a blank line (newline after the last entry).
+# Otherwise, cron may silently ignore the last scheduled task.
+
