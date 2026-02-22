@@ -48,6 +48,8 @@ validate-env:
 		(echo "❌ ERROR: DB_PASS is not set!"; exit 1)
 	@grep -q "^DB_PASS=dbrootpass" .env && \
 		echo "⚠️  WARNING: DB_PASS is using default password!" || true
+	@grep -q "^DB_ROOT_PASS=dbrootpass" .env && \
+		echo "⚠️  WARNING: DB_ROOT_PASS is using default password!" || true
 	@grep -q "^SFTP_PASS=sftppass" .env && \
 		echo "⚠️  WARNING: SFTP_PASS is using default password!" || true
 

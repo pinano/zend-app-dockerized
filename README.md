@@ -96,6 +96,7 @@ You can enable additional stack features for specific legacy applications via `.
 | `make shell` | Access the app container shell |
 | `make db` | Access the database console |
 | `make config` | Validate Docker Compose config |
+| `make crontab-init` | Create example crontab file |
 | `make size-small` | Apply Small sizing profile |
 | `make size-medium` | Apply Medium sizing profile |
 | `make size-large` | Apply Large sizing profile |
