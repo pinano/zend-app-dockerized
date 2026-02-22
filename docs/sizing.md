@@ -1,107 +1,33 @@
-# Sizing Guide: Multi-Tenancy on LXC
+# Capacity and Sizing Guide
 
-This guide helps you configure each Docker stack based on its traffic profile. Designed for running dozens of Zend Framework 1.x applications on a single LXC container.
+Proper sizing is crucial for running stable Zend Framework 1.x legacy applications, especially when hosting multiple tenants on the same server. This guide covers how to size your deployments safely.
 
----
+## Automated Sizing Profiles
+The provided `Makefile` includes predefined sizing profiles that automatically adjust `.env` variables to apply balanced CPU, Memory, caching, and database limits based on the expected application size.
 
-## 1. Application Profiles
-
-| Parameter | Small | Medium | Large |
-|-----------|-------|--------|-------|
-| **Traffic** | < 500 visits/day | 500–5.000 visits/day | > 5.000 visits/day |
-| `APP_CPUS` | 0.5 | 1.0 | 2.0 |
-| `APP_MEMORY` | 256M | 512M | 1G |
-| `APP_MEMORY_RESERVATION` | 64M | 128M | 256M |
-| `CRON_CPUS` | 0.1 | 0.25 | 0.5 |
-| `CRON_MEMORY` | 128M | 256M | 512M |
-| `DB_CPUS` | 0.5 | 2.0 | 4.0 |
-| `DB_MEMORY` | 512M | 1G | 2G |
-| `DB_INNODB_BUFFER_POOL_SIZE` | 128M | 256M | 512M |
-| `DB_MAX_CONNECTIONS` | 50 | 100 | 300 |
-| `PHP_OPCACHE_MEMORY_CONSUMPTION` | 128 | 256 | 512 |
-
-Copy these values to your project's `.env` file according to its traffic profile.
-
----
-
-## 2. Capacity Planning
-
-### Per-Stack Memory Footprint (approximate)
-
-| Component | Small | Medium | Large |
-|-----------|-------|--------|-------|
-| App (PHP-FPM + Apache) | ~200M | ~400M | ~700M |
-| Cron (CLI) | ~80M | ~150M | ~300M |
-| MariaDB | ~400M | ~800M | ~1.5G |
-| SFTP | ~20M | ~20M | ~20M |
-| Redis (optional) | ~50M | ~100M | ~200M |
-| **Total per stack** | **~750M** | **~1.5G** | **~2.7G** |
-
-### Example: 24 cores / 64 GB LXC Host
-
-Reserve ~4GB for the host OS + Docker + Traefik = **~60 GB available** for stacks.
-
-| Scenario | Stacks | Total RAM | Total CPUs |
-|----------|--------|-----------|------------|
-| All Small | ~60 | ~45G | ~30 (overcommit OK) |
-| Mixed: 30 Small + 10 Medium + 3 Large | 43 | ~46G | ~34 |
-| All Medium | ~35 | ~52G | ~24 |
-| All Large | ~18 | ~49G | ~24 |
-
-> [!TIP]
-> CPU limits can be **overcommitted** safely because most stacks are idle most of the time. Memory limits **cannot** — Docker will kill containers that exceed their limit (OOM).
-
----
-
-## 3. Key Tuning Rules
-
-### MariaDB Buffer Pool
-The `DB_INNODB_BUFFER_POOL_SIZE` is the **most impactful** tuning parameter. Set it to **50-70%** of `DB_MEMORY`:
-
-```
-DB_MEMORY=1G     → DB_INNODB_BUFFER_POOL_SIZE=512M-700M
-DB_MEMORY=512M   → DB_INNODB_BUFFER_POOL_SIZE=256M-350M
-```
-
-### OPcache Memory
-`PHP_OPCACHE_MEMORY_CONSUMPTION` should match the application size:
-- Small ZF1 app (~500 PHP files): **128** MB is enough
-- Medium ZF1 app (~2000 PHP files): **256** MB
-- Large ZF1 app (~5000+ PHP files): **512** MB
-
-### Max Connections
-`DB_MAX_CONNECTIONS` should account for:
-- Each Apache worker (PHP-FPM child) holds one DB connection
-- Cron jobs running in parallel
-- Rule of thumb: **2x** the number of concurrent PHP processes
-
-#### Database Connections Formula (Multi-Tenancy)
-When running multiple instances or predicting max connections for a shared load balancer:
-`DB_MAX_CONNECTIONS = (num_projects × avg_connections_per_app) + 20`
-Example: 30 projects × 3 connections = 90 + 20 = 110
-
----
-
-## 4. Monitoring
-
-### Quick Health Check
+To apply a profile, run:
 ```bash
-# Real-time resource usage for all stacks on the host
-docker stats --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}"
+make size-small   # For low traffic (< 500 visits/day)
+make size-medium  # For medium traffic (500 - 5000 visits/day)
+make size-large   # For high traffic (> 5000 visits/day)
 ```
 
-### Per-Stack Deep Dive
-```bash
-# Check a specific project's containers
-docker stats $(docker ps --filter "name=myproject" -q)
-```
+Always run `make start` or `make restart` to apply environment variable changes to running containers.
+You can view active sizing values easily using `make size-show`.
 
-### Detect Over-Provisioning
-If `MemUsage` is consistently below 30% of `MemLimit`, the stack is over-provisioned. Consider reducing `APP_MEMORY` and `DB_MEMORY` to free resources for other stacks.
+## Critical Warning: SWAP Usage and tmpfs
 
-### Detect Under-Provisioning
-If you see OOM kills in `docker events` or `dmesg`, the stack needs more memory:
-```bash
-# Check for OOM events
-docker events --filter event=oom --since 24h
-```
+> [!CAUTION]
+> **Active SWAP memory on the host completely destroys Zend Framework performance when using `tmpfs`.**
+
+This stack intentionally mounts the temporary `/var/www/html/tmp` directory into a fast, in-memory `tmpfs` volume instead of the persistent disk. This is because ZF1 heavily depends on the `/tmp` directory for session storage and various framework caches (core, classes, pages, forms).
+
+Using `tmpfs` is dramatically faster than SSD I/O. However, if your host server runs out of physical RAM and begins using SWAP files:
+1. Docker will seamlessly begin swapping the `tmpfs` volume back to the slow, physical disk.
+2. Because the OS kernel manages SWAP, it abstracts the disk latency from Docker. 
+3. The "in-memory" cache operations effectively become heavily delayed disk operations, causing catastrophic performance collapses and 500/504 Gateway errors.
+
+**Recommendation:**
+- Strictly control memory using `size-small` on hosts with low RAM.
+- Use monitoring tools (like Netdata, Datadog or Prometheus) to specifically alert if the host begins allocating SWAP.
+- Ensure the sum of all `*_MEMORY` limits across all tenants combined never exceeds 90% of the host's physical RAM, leaving 10% for OS overhead.

@@ -22,7 +22,7 @@ help:
 	@echo "  size-show    Show current sizing configuration"
 
 .PHONY: start
-start:
+start: validate-env
 	@if [ ! -f .env ]; then \
 		echo "⚠️  .env file not found, creating one from .env.dist..."; \
 		cp .env.dist .env; \
@@ -30,6 +30,14 @@ start:
 	@echo "🐳 Starting containers..."
 	@docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
+
+.PHONY: validate-env
+validate-env:
+	@echo "Validating .env configuration..."
+	@grep -q "^DB_PASS=dbrootpass" .env && \
+		echo "⚠️  WARNING: DB_PASS is using default password!" || true
+	@grep -q "^SFTP_PASS=sftppass" .env && \
+		echo "⚠️  WARNING: SFTP_PASS is using default password!" || true
 
 .PHONY: stop
 stop:
@@ -66,9 +74,9 @@ db:
 define set_env
 	@if grep -q "^$(1)=" .env; then \
 		if [ "$$(uname)" = "Darwin" ]; then \
-			sed -i '' 's/^$(1)=.*/$(1)=$(2)/' .env; \
+			sed -i '' 's|^$(1)=.*|$(1)=$(2)|' .env; \
 		else \
-			sed -i 's/^$(1)=.*/$(1)=$(2)/' .env; \
+			sed -i 's|^$(1)=.*|$(1)=$(2)|' .env; \
 		fi \
 	else \
 		awk 'END {if (NR>0 && $$0!="") printf "\n"}' .env >> .env; \
@@ -92,7 +100,7 @@ size-small: _ensure_env
 	$(call set_env,CRON_CPUS,0.1)
 	$(call set_env,CRON_MEMORY,128M)
 	$(call set_env,CRON_MEMORY_RESERVATION,32M)
-	$(call set_env,DB_CPUS,0.5)
+	$(call set_env,DB_CPUS,1.0)
 	$(call set_env,DB_MEMORY,512M)
 	$(call set_env,DB_MEMORY_RESERVATION,128M)
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,128M)
@@ -100,7 +108,8 @@ size-small: _ensure_env
 	$(call set_env,DB_MAX_CONNECTIONS,50)
 	$(call set_env,PHP_MEMORY_LIMIT,128M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,128)
-	# $(call set_env,PHP_REALPATH_CACHE_SIZE,32M) # Currently not available in serversideup images
+	$(call set_env,APP_TMPFS_SIZE,128M)
+	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,32M) # Currently not available in serversideup images
 	@echo "✅ SMALL profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-medium
@@ -120,7 +129,8 @@ size-medium: _ensure_env
 	$(call set_env,DB_MAX_CONNECTIONS,100)
 	$(call set_env,PHP_MEMORY_LIMIT,256M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
-	# $(call set_env,PHP_REALPATH_CACHE_SIZE,64M) # Currently not available in serversideup images
+	$(call set_env,APP_TMPFS_SIZE,256M)
+	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,64M) # Currently not available in serversideup images
 	@echo "✅ MEDIUM profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-large
@@ -140,7 +150,8 @@ size-large: _ensure_env
 	$(call set_env,DB_MAX_CONNECTIONS,300)
 	$(call set_env,PHP_MEMORY_LIMIT,512M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,1024)
-	# $(call set_env,PHP_REALPATH_CACHE_SIZE,128M) # Currently not available in serversideup images
+	$(call set_env,APP_TMPFS_SIZE,512M)
+	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,128M) # Currently not available in serversideup images
 	@echo "✅ LARGE profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-show
