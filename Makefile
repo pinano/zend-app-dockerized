@@ -64,10 +64,15 @@ db:
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
 define set_env
-	@if [ "$$(uname)" = "Darwin" ]; then \
-		sed -i '' 's/^$(1)=.*/$(1)=$(2)/' .env; \
+	@if grep -q "^$(1)=" .env; then \
+		if [ "$$(uname)" = "Darwin" ]; then \
+			sed -i '' 's/^$(1)=.*/$(1)=$(2)/' .env; \
+		else \
+			sed -i 's/^$(1)=.*/$(1)=$(2)/' .env; \
+		fi \
 	else \
-		sed -i 's/^$(1)=.*/$(1)=$(2)/' .env; \
+		awk 'END {if (NR>0 && $$0!="") printf "\n"}' .env >> .env; \
+		echo "$(1)=$(2)" >> .env; \
 	fi
 endef
 
@@ -93,8 +98,9 @@ size-small: _ensure_env
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,128M)
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,32M)
 	$(call set_env,DB_MAX_CONNECTIONS,50)
+	$(call set_env,PHP_MEMORY_LIMIT,128M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,128)
-	$(call set_env,PHP_REALPATH_CACHE_SIZE,32M)
+	# $(call set_env,PHP_REALPATH_CACHE_SIZE,32M) # Currently not available in serversideup images
 	@echo "✅ SMALL profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-medium
@@ -112,8 +118,9 @@ size-medium: _ensure_env
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,256M)
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,64M)
 	$(call set_env,DB_MAX_CONNECTIONS,100)
+	$(call set_env,PHP_MEMORY_LIMIT,256M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
-	$(call set_env,PHP_REALPATH_CACHE_SIZE,64M)
+	# $(call set_env,PHP_REALPATH_CACHE_SIZE,64M) # Currently not available in serversideup images
 	@echo "✅ MEDIUM profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-large
@@ -131,8 +138,9 @@ size-large: _ensure_env
 	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,512M)
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,128M)
 	$(call set_env,DB_MAX_CONNECTIONS,300)
+	$(call set_env,PHP_MEMORY_LIMIT,512M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,1024)
-	$(call set_env,PHP_REALPATH_CACHE_SIZE,128M)
+	# $(call set_env,PHP_REALPATH_CACHE_SIZE,128M) # Currently not available in serversideup images
 	@echo "✅ LARGE profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-show
@@ -142,5 +150,5 @@ size-show: _ensure_env
 	@echo "  App:   CPU=$$(grep '^APP_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^APP_MEMORY=' .env | cut -d= -f2)"
 	@echo "  Cron:  CPU=$$(grep '^CRON_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^CRON_MEMORY=' .env | cut -d= -f2)"
 	@echo "  DB:    CPU=$$(grep '^DB_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2)  BufferPool=$$(grep '^DB_INNODB_BUFFER_POOL_SIZE=' .env | cut -d= -f2)  LogFile=$$(grep '^DB_INNODB_LOG_FILE_SIZE=' .env | cut -d= -f2)  MaxConn=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2)"
-	@echo "  PHP:   OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB  Realpath=$$(grep '^PHP_REALPATH_CACHE_SIZE=' .env | cut -d= -f2)"
+	@echo "  PHP:   MemLimit=$$(grep '^PHP_MEMORY_LIMIT=' .env | cut -d= -f2)  OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB"
 	@echo "─────────────────────────────────"

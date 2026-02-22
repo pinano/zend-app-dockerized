@@ -46,7 +46,9 @@ services:
       PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-512M}
       PHP_MAX_EXECUTION_TIME: ${PHP_MAX_EXECUTION_TIME:-60}
       # Performance Tuning (Realpath)
-      PHP_REALPATH_CACHE_SIZE: ${PHP_REALPATH_CACHE_SIZE:-16M}
+      # Note: PHP_REALPATH_CACHE_SIZE is currently not available in serversideup images.
+      # Uncomment if it is added in the future.
+      # PHP_REALPATH_CACHE_SIZE: $${PHP_REALPATH_CACHE_SIZE:-16M}
       PHP_REALPATH_CACHE_TTL: ${PHP_REALPATH_CACHE_TTL:-7200}
       # Performance Tuning (OPcache)
       PHP_OPCACHE_ENABLE: 1
