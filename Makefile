@@ -144,10 +144,11 @@ db:
 
 .PHONY: ctop
 ctop:
-	@docker run --rm -ti \
+	@PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1); \
+	docker run --rm -ti \
 		--name=ctop \
 		--volume /var/run/docker.sock:/var/run/docker.sock:ro \
-		quay.io/vektorlab/ctop:latest
+		quay.io/vektorlab/ctop:latest -f "$$PROJECT_NAME"
 
 .PHONY: redis-info
 redis-info:
