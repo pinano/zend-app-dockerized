@@ -53,14 +53,28 @@ init:
 	@if [ ! -f .env ]; then \
 		echo "⚙️  Initializing .env from .env.dist..."; \
 		cp .env.dist .env; \
-		read -p "🔢 Enter PROJECT_ID (e.g., 999): " pid; \
-		if [ -n "$$pid" ]; then \
+		dir_name=$$(basename "$$(pwd)"); \
+		pid=$$(echo "$$dir_name" | cut -d'-' -f1); \
+		if echo "$$pid" | grep -Eq '^[0-9]+$$'; then \
+			pname=$$(echo "$$dir_name" | cut -d'-' -f2-); \
+			echo "🔍 Detected PROJECT_ID: $$pid, PROJECT_NAME: $$pname"; \
 			if [ "$$(uname)" = "Darwin" ]; then \
 				sed -i '' "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
+				sed -i '' "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
 			else \
 				sed -i "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
+				sed -i "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
 			fi; \
-			echo "✅ PROJECT_ID set to $$pid"; \
+		else \
+			read -p "🔢 Enter PROJECT_ID (e.g., 999): " pid; \
+			if [ -n "$$pid" ]; then \
+				if [ "$$(uname)" = "Darwin" ]; then \
+					sed -i '' "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
+				else \
+					sed -i "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
+				fi; \
+				echo "✅ PROJECT_ID set to $$pid"; \
+			fi; \
 		fi; \
 		echo "✅ .env created. Please review variables before starting."; \
 	else \
