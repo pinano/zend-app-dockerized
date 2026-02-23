@@ -192,7 +192,8 @@ services:
           memory: 128M
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${SFTP_PORT}:22" # <--- Only accessible from the host itself
+      #- "127.0.0.1:${SFTP_PORT}:22" # <--- Only accessible from the host itself
+      - "${SFTP_PORT}:22" # <--- Accessible from the host itself and traefik
     volumes:
       - ./docroot:/home/${SFTP_USER}/upload
     command: ${SFTP_USER}:${SFTP_PASS}:${USER_ID:-1000}:${GROUP_ID:-1000}
