@@ -23,6 +23,14 @@ help:
 	@echo "  config        Validate Docker Compose configuration"
 	@echo "  db            Connect to MariaDB console"
 	@echo "  ctop          Monitor containers using ctop"
+	@echo ""
+	@echo "Port Management:"
+	@echo "  open-ports    Open DB & SFTP ports to the outside world (0.0.0.0)"
+	@echo "  close-ports   Close DB & SFTP ports (restrict to 127.0.0.1)"
+	@echo "  open-db       Open only DB port"
+	@echo "  close-db      Close only DB port"
+	@echo "  open-sftp     Open only SFTP port"
+	@echo "  close-sftp    Close only SFTP port"
 	@if docker compose config --services 2>/dev/null | grep -q 'redis'; then \
 		echo ""; \
 		echo "Redis Management:"; \
@@ -45,6 +53,15 @@ init:
 	@if [ ! -f .env ]; then \
 		echo "⚙️  Initializing .env from .env.dist..."; \
 		cp .env.dist .env; \
+		read -p "🔢 Enter PROJECT_ID (e.g., 999): " pid; \
+		if [ -n "$$pid" ]; then \
+			if [ "$$(uname)" = "Darwin" ]; then \
+				sed -i '' "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
+			else \
+				sed -i "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
+			fi; \
+			echo "✅ PROJECT_ID set to $$pid"; \
+		fi; \
 		echo "✅ .env created. Please review variables before starting."; \
 	else \
 		echo "ℹ️  .env already exists."; \
@@ -53,8 +70,7 @@ init:
 .PHONY: start
 start:
 	@if [ ! -f .env ]; then \
-		echo "⚠️  .env file not found, creating one from .env.dist..."; \
-		cp .env.dist .env; \
+		$(MAKE) init || exit 1; \
 	fi
 	@$(MAKE) validate
 	@echo "🐳 Starting containers..."
@@ -66,6 +82,8 @@ validate:
 	@echo "Validating .env configuration..."
 	@[ -n "$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1)
+	@[ -n "$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: PROJECT_ID is not set!"; exit 1)
 	@[ -n "$$(grep '^DB_NAME=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: DB_NAME is not set!"; exit 1)
 	@[ -n "$$(grep '^DB_USER=' .env | cut -d= -f2 | head -1)" ] || \
@@ -150,6 +168,44 @@ ctop:
 		--volume /var/run/docker.sock:/var/run/docker.sock:ro \
 		elswork/ctop:latest -f "$$PROJECT_NAME"
 
+.PHONY: open-ports
+open-ports: _ensure_env
+	@echo "🌐 Opening DB and SFTP ports externally (0.0.0.0)..."
+	$(call set_env,DB_BIND_IP,0.0.0.0)
+	$(call set_env,SFTP_BIND_IP,0.0.0.0)
+	@echo "⚠️  Ports configured to be open. Run 'make restart' or 'docker compose up -d' to apply."
+
+.PHONY: close-ports
+close-ports: _ensure_env
+	@echo "🔒 Closing DB and SFTP ports (127.0.0.1)..."
+	$(call set_env,DB_BIND_IP,127.0.0.1)
+	$(call set_env,SFTP_BIND_IP,127.0.0.1)
+	@echo "✅ Ports configured to be closed. Run 'make restart' or 'docker compose up -d' to apply."
+
+.PHONY: open-db
+open-db: _ensure_env
+	@echo "🌐 Opening DB port externally (0.0.0.0)..."
+	$(call set_env,DB_BIND_IP,0.0.0.0)
+	@echo "⚠️  DB port configured to be open. Run 'make restart' or 'docker compose up -d' to apply."
+
+.PHONY: close-db
+close-db: _ensure_env
+	@echo "🔒 Closing DB port (127.0.0.1)..."
+	$(call set_env,DB_BIND_IP,127.0.0.1)
+	@echo "✅ DB port configured to be closed. Run 'make restart' or 'docker compose up -d' to apply."
+
+.PHONY: open-sftp
+open-sftp: _ensure_env
+	@echo "🌐 Opening SFTP port externally (0.0.0.0)..."
+	$(call set_env,SFTP_BIND_IP,0.0.0.0)
+	@echo "⚠️  SFTP port configured to be open. Run 'make restart' or 'docker compose up -d' to apply."
+
+.PHONY: close-sftp
+close-sftp: _ensure_env
+	@echo "🔒 Closing SFTP port (127.0.0.1)..."
+	$(call set_env,SFTP_BIND_IP,127.0.0.1)
+	@echo "✅ SFTP port configured to be closed. Run 'make restart' or 'docker compose up -d' to apply."
+
 .PHONY: redis-info
 redis-info:
 	@docker compose exec redis valkey-cli info
@@ -181,8 +237,7 @@ endef
 .PHONY: _ensure_env
 _ensure_env:
 	@if [ ! -f .env ]; then \
-		echo "⚠️  .env file not found, creating one from .env.dist..."; \
-		cp .env.dist .env; \
+		$(MAKE) init || exit 1; \
 	fi
 
 .PHONY: size-small

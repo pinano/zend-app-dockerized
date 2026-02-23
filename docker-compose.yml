@@ -170,7 +170,7 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./mariadb_data:/var/lib/mysql
     ports:
-      - "127.0.0.1:${DB_HOST_PORT}:3306" # <--- Only accessible from the host itself
+      - "${DB_BIND_IP:-127.0.0.1}:33${PROJECT_ID}:3306" # <--- Controlled by DB_BIND_IP and PROJECT_ID in .env
     environment:
       TZ: ${TZ}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASS}
@@ -192,8 +192,7 @@ services:
           memory: 128M
     restart: unless-stopped
     ports:
-      #- "127.0.0.1:${SFTP_PORT}:22" # <--- Only accessible from the host itself
-      - "${SFTP_PORT}:22" # <--- Accessible from the host itself and traefik
+      - "${SFTP_BIND_IP:-127.0.0.1}:22${PROJECT_ID}:22" # <--- Controlled by SFTP_BIND_IP and PROJECT_ID in .env
     volumes:
       - ./docroot:/home/${SFTP_USER}/upload
     command: ${SFTP_USER}:${SFTP_PASS}:${USER_ID:-1000}:${GROUP_ID:-1000}
