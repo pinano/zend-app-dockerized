@@ -21,7 +21,7 @@ help:
 	@echo "  pull          Pull latest images"
 	@echo "  clean         Clean up everything, removing volumes (Requires confirmation)"
 	@echo "  config        Validate Docker Compose configuration"
-	@echo "  db            Connect to MariaDB console"
+	@echo "  db            DB Tools (console, import, export). Run 'make db', 'make db import <file>', 'make db export'"
 	@echo "  ctop          Monitor containers using ctop"
 	@echo ""
 	@echo "Port Management:"
@@ -84,9 +84,9 @@ init:
 .PHONY: start
 start:
 	@if [ ! -f .env ]; then \
-		$(MAKE) init || exit 1; \
+		$(MAKE) --no-print-directory init || exit 1; \
 	fi
-	@$(MAKE) validate
+	@$(MAKE) --no-print-directory validate
 	@echo "🐳 Starting containers..."
 	@docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
@@ -121,8 +121,8 @@ stop:
 .PHONY: restart
 restart:
 	@echo "🔄 Restarting stack..."
-	@$(MAKE) stop
-	@$(MAKE) start
+	@$(MAKE) --no-print-directory stop
+	@$(MAKE) --no-print-directory start
 
 .PHONY: status
 status:
@@ -170,9 +170,36 @@ rebuild:
 	@docker compose build $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: db
-db:
-	@echo "🔌 Connecting to database..."
-	@docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'
+db: _ensure_env
+	@ACTION="$(word 2,$(MAKECMDGOALS))"; \
+	if [ "$$ACTION" = "import" ]; then \
+		FILE="$(word 3,$(MAKECMDGOALS))"; \
+		if [ -z "$$FILE" ]; then \
+			echo "❌ ERROR: Please specify a file to import (e.g., make db import file.sql)"; \
+			exit 1; \
+		fi; \
+		if [ ! -f "$$FILE" ]; then \
+			echo "❌ ERROR: File $$FILE not found!"; \
+			exit 1; \
+		fi; \
+		echo "� Importing $$FILE into database..."; \
+		docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
+		echo "✅ Import complete!"; \
+	elif [ "$$ACTION" = "export" ]; then \
+		PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1); \
+		PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1); \
+		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
+		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
+		echo "📤 Exporting database to $$FILENAME..."; \
+		docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump -u $${MARIADB_USER} $${MARIADB_DATABASE}' > "$$FILENAME"; \
+		echo "✅ Export complete! Saved to $$FILENAME"; \
+	elif [ -n "$$ACTION" ]; then \
+		echo "❌ ERROR: Invalid db action: $$ACTION. Use 'import <file>', 'export', or no arguments for console."; \
+		exit 1; \
+	else \
+		echo "�🔌 Connecting to database..."; \
+		docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+	fi
 
 .PHONY: ctop
 ctop:
@@ -251,7 +278,7 @@ endef
 .PHONY: _ensure_env
 _ensure_env:
 	@if [ ! -f .env ]; then \
-		$(MAKE) init || exit 1; \
+		$(MAKE) --no-print-directory init || exit 1; \
 	fi
 
 .PHONY: size-small
