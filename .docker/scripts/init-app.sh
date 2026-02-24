@@ -49,23 +49,3 @@ if [ "$IS_CRON" = "1" ]; then
     } > /etc/environment
     echo "✅ Created /etc/environment with Docker variables."
 fi
-
-# --- ZEND FRAMEWORK LOG SYMLINK ---
-# Zend Framework 1 writes logs to application/logs/error.log by default.
-# To make them visible in `docker compose logs app`, we symlink that file to stderr.
-LOG_DIR="/var/www/html/application/logs"
-LOG_FILE="$LOG_DIR/error.log"
-
-echo "📁 Ensuring Zend log directory exists..."
-mkdir -p "$LOG_DIR"
-chown www-data:www-data "$LOG_DIR"
-chmod 775 "$LOG_DIR"
-
-if [ ! -L "$LOG_FILE" ]; then
-    echo "🔗 Symlinking $LOG_FILE to stderr so it shows up in Docker logs..."
-    rm -f "$LOG_FILE"
-    ln -sf /dev/stderr "$LOG_FILE"
-    chown -h www-data:www-data "$LOG_FILE"
-else
-    echo "✅ Zend log symlink already exists."
-fi
