@@ -88,7 +88,7 @@ start:
 	fi
 	@$(MAKE) --no-print-directory validate
 	@echo "🐳 Starting containers..."
-	@docker compose up -d --remove-orphans
+	@. ./.docker/scripts/set-env-vars.sh && docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
 
 .PHONY: validate
@@ -115,7 +115,7 @@ validate:
 .PHONY: stop
 stop:
 	@echo "🛑 Stopping containers..."
-	@docker compose down --remove-orphans
+	@. ./.docker/scripts/set-env-vars.sh && docker compose down --remove-orphans
 	@echo "✅ Stack is down!"
 
 .PHONY: restart
@@ -126,11 +126,11 @@ restart:
 
 .PHONY: status
 status:
-	@docker compose ps
+	@. ./.docker/scripts/set-env-vars.sh && docker compose ps
 
 .PHONY: services
 services:
-	@docker compose config --services
+	@. ./.docker/scripts/set-env-vars.sh && docker compose config --services
 
 .PHONY: sync
 sync:
@@ -139,23 +139,23 @@ sync:
 
 .PHONY: logs
 logs:
-	@docker compose logs -f $(filter-out $@,$(MAKECMDGOALS))
+	@. ./.docker/scripts/set-env-vars.sh && docker compose logs -f $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: shell
 shell:
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$SERVICE" ]; then SERVICE="app"; fi; \
-	docker compose exec $$SERVICE /bin/bash 2>/dev/null || docker compose exec $$SERVICE /bin/sh
+	. ./.docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/bash 2>/dev/null || . ./.docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/sh
 
 .PHONY: pull
 pull:
-	@docker compose pull
+	@. ./.docker/scripts/set-env-vars.sh && docker compose pull
 
 .PHONY: clean
 clean:
 	@read -p "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Area you sure? [y/N] " ans && \
 	if [ $${ans:-N} = y ]; then \
-		docker compose down -v --remove-orphans; \
+		. ./.docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
 		echo "🧹 Clean complete."; \
 	else \
 		echo "Aborting clean."; \
@@ -163,11 +163,11 @@ clean:
 
 .PHONY: config
 config:
-	@docker compose config
+	@. ./.docker/scripts/set-env-vars.sh && docker compose config
 
 .PHONY: rebuild
 rebuild:
-	@docker compose build $(filter-out $@,$(MAKECMDGOALS))
+	@. ./.docker/scripts/set-env-vars.sh && docker compose build $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: db
 db: _ensure_env
@@ -184,10 +184,10 @@ db: _ensure_env
 		fi; \
 		echo "📄 Importing $$FILE into database..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+			pv "$$FILE" | . ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-			docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
 		fi; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
@@ -197,10 +197,10 @@ db: _ensure_env
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | pv > "$$FILENAME"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' > "$$FILENAME"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' > "$$FILENAME"; \
 		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
@@ -208,7 +208,7 @@ db: _ensure_env
 		exit 1; \
 	else \
 		echo "🔌 Connecting to database..."; \
-		docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+		. ./.docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 	fi
 
 .PHONY: ctop
@@ -259,16 +259,16 @@ close-sftp: _ensure_env
 
 .PHONY: redis-info
 redis-info:
-	@docker compose exec redis valkey-cli info
+	@. ./.docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli info
 
 .PHONY: redis-monitor
 redis-monitor:
 	@echo "📡 Monitoring Redis commands... (Press Ctrl+C to stop)"
-	@docker compose exec redis valkey-cli monitor
+	@. ./.docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli monitor
 
 .PHONY: redis-ping
 redis-ping:
-	@docker compose exec redis valkey-cli ping
+	@. ./.docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli ping
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
