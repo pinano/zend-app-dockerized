@@ -40,13 +40,11 @@ fi
 # can connect to MariaDB and respect the APP_ENV.
 if [ "$IS_CRON" = "1" ]; then
     echo "⚙️  Saving environment variables to /etc/environment (cron daemon requires explicit env exports)..."
+    # /etc/environment format: KEY=value (no 'export', no multiline values)
+    # We explicitly list only the variables that cron scripts need.
     {
-        echo "export DB_HOST=${DB_HOST}"
-        echo "export DB_NAME=${DB_NAME}"
-        echo "export DB_USER=${DB_USER}"
-        echo "export DB_PASS=${DB_PASS}"
-        echo "export APP_ENV=${APP_ENV}"
-        printenv | grep -v "no_proxy" | grep -v "HOSTNAME" | grep -v "PWD"
+        printenv | grep -E "^(DB_HOST|DB_NAME|DB_USER|DB_PASS|APP_ENV|TZ|PHP_|USER_ID|GROUP_ID)=" \
+            | sed "s/'/'\\\\''/g"
     } > /etc/environment
     echo "✅ Created /etc/environment with Docker variables."
 fi

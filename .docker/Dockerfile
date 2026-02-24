@@ -1,3 +1,4 @@
+# Image for running the main app
 # Declare default PHP version before FROM
 ARG PHP_VERSION=7.4
 

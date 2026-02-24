@@ -145,7 +145,7 @@ services:
     container_name: ${PROJECT_NAME}-db
     command:
       - --default-authentication-plugin=mysql_native_password
-      - --sql_mode=ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION
+      - --sql_mode=ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
       - --max-connections=${DB_MAX_CONNECTIONS:-100}
       - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-256M}
       - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-64M}

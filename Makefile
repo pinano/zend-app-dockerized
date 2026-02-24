@@ -67,7 +67,7 @@ init:
 				sed -i "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
 			fi; \
 		else \
-			read -p "🔢 Enter PROJECT_ID (e.g., 999): " pid; \
+			printf "🔢 Enter PROJECT_ID (e.g., 999): " && read pid; \
 			if [ -n "$$pid" ]; then \
 				if [ "$$(uname)" = "Darwin" ]; then \
 					sed -i '' "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
@@ -136,6 +136,7 @@ services:
 .PHONY: sync
 sync:
 	@echo "🔄 Synchronizing .env with .env.dist..."
+	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required for 'make sync'. Install it with: apt install python3 / brew install python3"; exit 1)
 	@python3 .docker/scripts/sync-env.py
 
 .PHONY: logs
@@ -154,7 +155,7 @@ pull:
 
 .PHONY: clean
 clean:
-	@read -p "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Area you sure? [y/N] " ans && \
+	@printf "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Are you sure? [y/N] " && read ans && \
 	if [ $${ans:-N} = y ]; then \
 		. ./.docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
 		echo "🧹 Clean complete."; \
@@ -198,10 +199,10 @@ db: _ensure_env
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE} | sed -e '\''s/DEFINER[ ]*=[ ]*[^*]*\*/\*/'\''' | pv > "$$FILENAME"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE} | sed -e '\''s/DEFINER[ ]*=[ ]*[^*]*\*/\*/'\''' > "$$FILENAME"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
 		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
@@ -216,6 +217,7 @@ db: _ensure_env
 ctop:
 	@PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1); \
 	docker run --rm -ti \
+		--platform linux/amd64 \
 		--name=ctop \
 		--volume /var/run/docker.sock:/var/run/docker.sock:ro \
 		elswork/ctop:latest -f "$$PROJECT_NAME"
