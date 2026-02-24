@@ -105,6 +105,12 @@ validate:
 		(echo "❌ ERROR: DB_USER is not set!"; exit 1)
 	@[ -n "$$(grep '^DB_PASS=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: DB_PASS is not set!"; exit 1)
+	@[ "$$(grep '^USER_ID=' .env | cut -d= -f2 | head -1)" != "0" ] && \
+		[ -n "$$(grep '^USER_ID=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: USER_ID must be set and non-zero!"; exit 1)
+	@[ "$$(grep '^GROUP_ID=' .env | cut -d= -f2 | head -1)" != "0" ] && \
+		[ -n "$$(grep '^GROUP_ID=' .env | cut -d= -f2 | head -1)" ] || \
+		(echo "❌ ERROR: GROUP_ID must be set and non-zero!"; exit 1)
 	@grep -q "^DB_PASS=dbrootpass" .env && \
 		echo "⚠️  WARNING: DB_PASS is using default password!" || true
 	@grep -q "^DB_ROOT_PASS=dbrootpass" .env && \
@@ -225,7 +231,7 @@ ctop:
 .PHONY: php-info
 php-info:
 	@echo "🔍 Active PHP Configuration (CLI context):"
-	@. ./.docker/scripts/set-env-vars.sh && docker compose exec app php -i | grep -E "^(error_log|error_reporting|display_errors|log_errors|memory_limit|max_execution_time|opcache\.(enable|validate_timestamps|revalidate_freq)) "
+	@. ./.docker/scripts/set-env-vars.sh && docker compose exec app php -i | grep -E "^(date\.timezone|error_log|error_reporting|display_errors|log_errors|max_input_vars|memory_limit|max_execution_time|opcache\.(enable|validate_timestamps|revalidate_freq)) "
 
 .PHONY: open-ports
 open-ports: _ensure_env
@@ -318,7 +324,9 @@ size-small: _ensure_env
 	$(call set_env,PHP_MEMORY_LIMIT,128M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,128)
 	$(call set_env,APP_TMPFS_SIZE,128M)
-	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,32M) # Currently not available in serversideup images
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,10)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,10)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
 	@echo "✅ SMALL profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-medium
@@ -340,7 +348,9 @@ size-medium: _ensure_env
 	$(call set_env,PHP_MEMORY_LIMIT,256M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,256)
 	$(call set_env,APP_TMPFS_SIZE,256M)
-	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,64M) # Currently not available in serversideup images
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,25)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,25)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
 	@echo "✅ MEDIUM profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-large
@@ -362,7 +372,9 @@ size-large: _ensure_env
 	$(call set_env,PHP_MEMORY_LIMIT,512M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
 	$(call set_env,APP_TMPFS_SIZE,512M)
-	@# $(call set_env,PHP_REALPATH_CACHE_SIZE,128M) # Currently not available in serversideup images
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,50)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,50)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
 	@echo "✅ LARGE profile applied. Run 'make restart' to apply changes."
 
 .PHONY: size-show
