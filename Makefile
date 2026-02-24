@@ -44,10 +44,10 @@ help:
 	@echo "  crontab-init Create example crontab file"
 	@echo ""
 	@echo "Sizing:"
-	@echo "  size-small   Configure .env for low-traffic app (< 500 visits/day)"
-	@echo "  size-medium  Configure .env for medium-traffic app (500-5000 visits/day)"
-	@echo "  size-large   Configure .env for high-traffic app (> 5000 visits/day)"
-	@echo "  size-show    Show current sizing configuration"
+	@echo "  size-small    Configure .env for low-traffic app (< 500 visits/day)"
+	@echo "  size-medium   Configure .env for medium-traffic app (500-5000 visits/day)"
+	@echo "  size-large    Configure .env for high-traffic app (> 5000 visits/day)"
+	@echo "  size-show     Show current sizing configuration"
 
 .PHONY: init
 init:

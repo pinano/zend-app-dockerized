@@ -25,6 +25,7 @@ echo "✅ Tmp structure initialized."
 # This allows Docker healthchecks to verify PHP-FPM is responding without
 # depending on the application's routing or framework.
 HEALTHCHECK_FILE="${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/healthcheck.php"
+mkdir -p "$(dirname "$HEALTHCHECK_FILE")"
 if [ ! -f "$HEALTHCHECK_FILE" ]; then
     echo '<?php http_response_code(200); echo "ok";' > "$HEALTHCHECK_FILE"
     chown www-data:www-data "$HEALTHCHECK_FILE"
