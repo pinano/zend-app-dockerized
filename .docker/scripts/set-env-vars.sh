@@ -4,14 +4,27 @@
 # Save current APP_ENV if passed inline
 CURRENT_APP_ENV="${APP_ENV:-}"
 
-# Correctly resolve path even when sourced
-if [ -n "$BASH_SOURCE" ]; then
+# Resolve PROJECT_ROOT and ENV_PATH
+if [ -f ".env" ]; then
+  # If .env is in the current directory, assume we are at the project root
+  PROJECT_ROOT="."
+  ENV_PATH="./.env"
+elif [ -n "$BASH_SOURCE" ]; then
   SCRIPT_PATH="${BASH_SOURCE[0]}"
+  PROJECT_ROOT="$(cd "$(dirname "$(dirname "$(dirname "$SCRIPT_PATH")")")" && pwd)"
+  ENV_PATH="${PROJECT_ROOT}/.env"
 else
+  # Fallback for shells like dash which don't support BASH_SOURCE
   SCRIPT_PATH="$0"
+  if [ -f "$SCRIPT_PATH" ]; then
+    PROJECT_ROOT="$(cd "$(dirname "$(dirname "$(dirname "$SCRIPT_PATH")")")" && pwd)"
+    ENV_PATH="${PROJECT_ROOT}/.env"
+  else
+    # Last resort fallback to current directory
+    PROJECT_ROOT="."
+    ENV_PATH="./.env"
+  fi
 fi
-PROJECT_ROOT="$(cd "$(dirname "$(dirname "$(dirname "$SCRIPT_PATH")")")" && pwd)"
-ENV_PATH="${PROJECT_ROOT}/.env"
 
 if [ -f "$ENV_PATH" ]; then
   # Load .env variables

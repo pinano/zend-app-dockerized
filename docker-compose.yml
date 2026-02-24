@@ -36,7 +36,7 @@ services:
       TZ: ${TZ}
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
-      APPLICATION_ENV: ${APP_ENV:-development}
+      APP_ENV: ${APP_ENV:-development}
       # Apache
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
       APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
@@ -121,7 +121,7 @@ services:
       TZ: ${TZ}
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
-      APPLICATION_ENV: ${APP_ENV:-development}
+      APP_ENV: ${APP_ENV:-development}
       IS_CRON: 1
       # PHP
       PHP_DISPLAY_ERRORS: ${PHP_DISPLAY_ERRORS:-${APP_ENV_PHP_DISPLAY_ERRORS:-Off}}
