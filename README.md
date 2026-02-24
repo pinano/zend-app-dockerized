@@ -75,6 +75,7 @@ You can enable additional stack features for specific legacy applications via `.
 - **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `.docker/scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
 - **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `.docker/php/custom.ini` without modifying the core image.
 - **Verbose Logging**: Adjust `APACHE_LOG_LEVEL=debug` (or `warn` by default) in your `.env` to troubleshoot complex HTTP errors.
+- **Application Error Logs**: ZF1 exceptions are caught by `ErrorController` and invisible in Docker logs by default. See **[Logging Guide](docs/logging.md)** for the required fix and best practices.
 
 ## Project Structure
 
