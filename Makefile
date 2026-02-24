@@ -182,7 +182,7 @@ db: _ensure_env
 			echo "❌ ERROR: File $$FILE not found!"; \
 			exit 1; \
 		fi; \
-		echo "� Importing $$FILE into database..."; \
+		echo "📄 Importing $$FILE into database..."; \
 		if command -v pv >/dev/null 2>&1; then \
 			pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 		else \
@@ -207,7 +207,7 @@ db: _ensure_env
 		echo "❌ ERROR: Invalid db action: $$ACTION. Use 'import <file>', 'export', or no arguments for console."; \
 		exit 1; \
 	else \
-		echo "�🔌 Connecting to database..."; \
+		echo "🔌 Connecting to database..."; \
 		docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 	fi
 
