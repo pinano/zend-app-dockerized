@@ -25,7 +25,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - ./.docker/apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
       - ./.docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
-      - ./.docker/php/docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf:ro
       - ./docroot:/var/www/html
       - type: tmpfs
         target: /var/www/html/tmp
@@ -63,7 +62,7 @@ services:
       DB_HOST: db
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASS}
+      DB_PASS: ${DB_PASS}
     healthcheck:
       test: [ "CMD-SHELL", "curl -sf --max-time 5 --connect-timeout 2 http://localhost:8080/healthcheck.php -o /dev/null || exit 1" ]
       interval: ${HEALTHCHECK_INTERVAL:-60s}
@@ -128,7 +127,7 @@ services:
       DB_HOST: db
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASS}
+      DB_PASS: ${DB_PASS}
     command: cron -f
     restart: unless-stopped
     networks:
