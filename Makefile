@@ -183,7 +183,12 @@ db: _ensure_env
 			exit 1; \
 		fi; \
 		echo "� Importing $$FILE into database..."; \
-		docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
+		if command -v pv >/dev/null 2>&1; then \
+			pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+		else \
+			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
+			docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
+		fi; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
 		PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1); \
@@ -191,7 +196,12 @@ db: _ensure_env
 		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
-		docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' > "$$FILENAME"; \
+		if command -v pv >/dev/null 2>&1; then \
+			docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | pv > "$$FILENAME"; \
+		else \
+			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
+			docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' > "$$FILENAME"; \
+		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
 		echo "❌ ERROR: Invalid db action: $$ACTION. Use 'import <file>', 'export', or no arguments for console."; \
