@@ -7,7 +7,7 @@ CURRENT_APP_ENV="${APP_ENV:-}"
 if [ -f .env ]; then
   # Load .env variables
   set -a
-  source .env
+  . .env
   set +a
 fi
 
