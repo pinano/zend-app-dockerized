@@ -27,10 +27,21 @@ else
 fi
 
 if [ -f "$ENV_PATH" ]; then
-  # Load .env variables
-  set -a
-  . "$ENV_PATH"
-  set +a
+  # Parse .env safely line by line — avoids dash interpreting & | ; etc. in values
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Skip blank lines and comments
+    case "$line" in
+      ''|'#'*) continue ;;
+    esac
+    # Split on first '=' only, preserving everything after it as the value
+    key="${line%%=*}"
+    val="${line#*=}"
+    # Skip malformed lines (no key or key contains spaces)
+    case "$key" in
+      *' '*|*'	'*|'') continue ;;
+    esac
+    export "$key=$val"
+  done < "$ENV_PATH"
 fi
 
 # Override with inline if it existed
