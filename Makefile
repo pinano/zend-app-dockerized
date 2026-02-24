@@ -185,7 +185,7 @@ db: _ensure_env
 		fi; \
 		echo "📄 Importing $$FILE into database..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			pv "$$FILE" | . ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+			. ./.docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
 			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
@@ -198,10 +198,10 @@ db: _ensure_env
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | pv > "$$FILENAME"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE} | sed -e '\''s/DEFINER[ ]*=[ ]*[^*]*\*/\*/'\''' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' > "$$FILENAME"; \
+			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE} | sed -e '\''s/DEFINER[ ]*=[ ]*[^*]*\*/\*/'\''' > "$$FILENAME"; \
 		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
