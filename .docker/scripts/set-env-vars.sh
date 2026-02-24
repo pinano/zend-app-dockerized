@@ -4,10 +4,13 @@
 # Save current APP_ENV if passed inline
 CURRENT_APP_ENV="${APP_ENV:-}"
 
-if [ -f .env ]; then
+PROJECT_ROOT="$(dirname "$(dirname "$(dirname "$0")")")"
+ENV_PATH="${PROJECT_ROOT}/.env"
+
+if [ -f "$ENV_PATH" ]; then
   # Load .env variables
   set -a
-  . .env
+  . "$ENV_PATH"
   set +a
 fi
 
