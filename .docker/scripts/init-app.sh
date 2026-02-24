@@ -64,7 +64,7 @@ chmod 775 "$LOG_DIR"
 if [ ! -L "$LOG_FILE" ]; then
     echo "🔗 Symlinking $LOG_FILE to stderr so it shows up in Docker logs..."
     rm -f "$LOG_FILE"
-    ln -sf /proc/1/fd/2 "$LOG_FILE"
+    ln -sf /dev/stderr "$LOG_FILE"
     chown -h www-data:www-data "$LOG_FILE"
 else
     echo "✅ Zend log symlink already exists."
