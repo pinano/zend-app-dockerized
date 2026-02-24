@@ -21,6 +21,7 @@ help:
 	@echo "  pull          Pull latest images"
 	@echo "  clean         Clean up everything, removing volumes (Requires confirmation)"
 	@echo "  config        Validate Docker Compose configuration"
+	@echo "  php-info      Show active PHP configuration in the container (OPcache, Memory, Errors...)"
 	@echo "  db            DB Tools (console, import, export). Run 'make db', 'make db import <file>', 'make db export'"
 	@echo "  ctop          Monitor containers using ctop"
 	@echo ""
@@ -218,6 +219,11 @@ ctop:
 		--name=ctop \
 		--volume /var/run/docker.sock:/var/run/docker.sock:ro \
 		elswork/ctop:latest -f "$$PROJECT_NAME"
+
+.PHONY: php-info
+php-info:
+	@echo "🔍 Active PHP Configuration (CLI context):"
+	@. ./.docker/scripts/set-env-vars.sh && docker compose exec app php -i | grep -E "^(error_log|error_reporting|display_errors|log_errors|memory_limit|max_execution_time|opcache\.(enable|validate_timestamps|revalidate_freq)) "
 
 .PHONY: open-ports
 open-ports: _ensure_env
