@@ -18,6 +18,18 @@ mkdir -p /var/www/html/tmp/cache \
 
 chown -R www-data:www-data /var/www/html/tmp
 chmod -R 775 /var/www/html/tmp
+
+# --- PHP ERROR LOG FORWARDER ---
+# Workaround for S6 overlay masking FPM worker stderr output.
+# PHP writes errors to a file, and this tail process forwards them to PID 1 (Docker logs).
+PHP_ERROR_LOG=/var/www/html/tmp/php_errors.log
+touch "$PHP_ERROR_LOG"
+chown www-data:www-data "$PHP_ERROR_LOG"
+chmod 664 "$PHP_ERROR_LOG"
+tail -F "$PHP_ERROR_LOG" > /proc/1/fd/2 2>/dev/null &
+echo "✅ PHP error log forwarder started (→ Docker logs)"
+
+
 echo "✅ Tmp structure initialized."
 
 # --- HEALTHCHECK ---
@@ -32,6 +44,19 @@ if [ ! -f "$HEALTHCHECK_FILE" ]; then
     echo "✅ Healthcheck created at $HEALTHCHECK_FILE"
 else
     echo "ℹ️  Healthcheck already exists at $HEALTHCHECK_FILE, skipping."
+fi
+
+# --- DYNAMIC PHP ERROR REPORTING ---
+# Convert string values (like "E_ALL & ~E_NOTICE") to an integer for FPM pool.
+# FPM cannot parse PHP language constants natively via env vars.
+if [ -n "$PHP_ERROR_REPORTING" ]; then
+    echo "⚙️  Evaluating PHP_ERROR_REPORTING to integer for FPM pool..."
+    INT_VAL=$(php -r "echo ($PHP_ERROR_REPORTING);")
+    cat > /usr/local/etc/php-fpm.d/99-dynamic-error-reporting.conf <<EOF
+[www]
+php_admin_value[error_reporting] = $INT_VAL
+EOF
+    echo "✅ PHP error reporting configured dynamically ($INT_VAL)."
 fi
 
 # --- CRON ENVIRONMENT INJECTION ---
