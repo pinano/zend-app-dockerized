@@ -147,7 +147,13 @@ sync:
 
 .PHONY: logs
 logs:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose logs -f $(filter-out $@,$(MAKECMDGOALS))
+	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
+	if [ "$$SERVICE" = "zend" ]; then \
+		echo "📋 Tailing Zend application log (/var/www/html/tmp/zend_error.log)..."; \
+		. ./.docker/scripts/set-env-vars.sh && docker compose exec app tail -f /var/www/html/tmp/zend_error.log; \
+	else \
+		. ./.docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE; \
+	fi
 
 .PHONY: shell
 shell:
