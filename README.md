@@ -106,7 +106,7 @@ You can enable additional stack features for specific legacy applications via `.
 | `make services` | List available services |
 | `make validate` | Validate `.env` against minimum requirements |
 | `make sync` | Synchronize `.env` with `.env.dist` (Add missing keys) |
-| `make logs <svr>` | View container logs (all or specific) |
+| `make logs [svr\|zend]` | Container logs (all or specific service) or Zend app log (`zend`) |
 | `make shell <svr>` | Access container shell (defaults to `app`) |
 | `make pull` | Pull latest images |
 | `make clean` | Clean configs and volumes (requires confirmation) |
