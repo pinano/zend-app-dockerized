@@ -150,7 +150,7 @@ logs:
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ "$$SERVICE" = "zend" ]; then \
 		echo "📋 Tailing Zend application log (/var/www/html/tmp/zend_error.log)..."; \
-		. ./.docker/scripts/set-env-vars.sh && docker compose exec app tail -f /var/www/html/tmp/zend_error.log; \
+		. ./.docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/zend_error.log; \
 	else \
 		. ./.docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE; \
 	fi
