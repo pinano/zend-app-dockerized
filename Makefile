@@ -89,7 +89,7 @@ start:
 	fi
 	@$(MAKE) --no-print-directory validate
 	@echo "🐳 Starting containers..."
-	@. ./.docker/scripts/set-env-vars.sh && docker compose up -d --remove-orphans
+	@. ./docker/scripts/set-env-vars.sh && docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
 
 .PHONY: validate
@@ -122,7 +122,7 @@ validate:
 .PHONY: stop
 stop:
 	@echo "🛑 Stopping containers..."
-	@. ./.docker/scripts/set-env-vars.sh && docker compose down --remove-orphans
+	@. ./docker/scripts/set-env-vars.sh && docker compose down --remove-orphans
 	@echo "✅ Stack is down!"
 
 .PHONY: restart
@@ -133,43 +133,43 @@ restart:
 
 .PHONY: status
 status:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose ps
+	@. ./docker/scripts/set-env-vars.sh && docker compose ps
 
 .PHONY: services
 services:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose config --services
+	@. ./docker/scripts/set-env-vars.sh && docker compose config --services
 
 .PHONY: sync
 sync:
 	@echo "🔄 Synchronizing .env with .env.dist..."
 	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required for 'make sync'. Install it with: apt install python3 / brew install python3"; exit 1)
-	@python3 .docker/scripts/sync-env.py
+	@python3 docker/scripts/sync-env.py
 
 .PHONY: logs
 logs:
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ "$$SERVICE" = "zend" ]; then \
 		echo "📋 Tailing Zend application log (/var/www/html/tmp/zend_error.log)..."; \
-		. ./.docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/zend_error.log; \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/zend_error.log; \
 	else \
-		. ./.docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE; \
+		. ./docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE; \
 	fi
 
 .PHONY: shell
 shell:
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$SERVICE" ]; then SERVICE="app"; fi; \
-	. ./.docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/bash 2>/dev/null || . ./.docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/sh
+	. ./docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/bash 2>/dev/null || . ./docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/sh
 
 .PHONY: pull
 pull:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose pull
+	@. ./docker/scripts/set-env-vars.sh && docker compose pull
 
 .PHONY: clean
 clean:
 	@printf "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Are you sure? [y/N] " && read ans && \
 	if [ $${ans:-N} = y ]; then \
-		. ./.docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
+		. ./docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
 		echo "🧹 Clean complete."; \
 	else \
 		echo "Aborting clean."; \
@@ -177,11 +177,11 @@ clean:
 
 .PHONY: config
 config:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose config
+	@. ./docker/scripts/set-env-vars.sh && docker compose config
 
 .PHONY: rebuild
 rebuild:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose build $(filter-out $@,$(MAKECMDGOALS))
+	@. ./docker/scripts/set-env-vars.sh && docker compose build $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: db
 db: _ensure_env
@@ -198,10 +198,10 @@ db: _ensure_env
 		fi; \
 		echo "📄 Importing $$FILE into database..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./.docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+			. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
 		fi; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
@@ -211,10 +211,10 @@ db: _ensure_env
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./.docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
 		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
@@ -222,7 +222,7 @@ db: _ensure_env
 		exit 1; \
 	else \
 		echo "🔌 Connecting to database..."; \
-		. ./.docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 	fi
 
 .PHONY: ctop
@@ -237,7 +237,7 @@ ctop:
 .PHONY: php-info
 php-info:
 	@echo "🔍 Active PHP Configuration (CLI context):"
-	@. ./.docker/scripts/set-env-vars.sh && docker compose exec app php -i | grep -E "^(date\.timezone|error_log|error_reporting|display_errors|log_errors|max_input_vars|memory_limit|max_execution_time|opcache\.(enable|validate_timestamps|revalidate_freq)) "
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec app php -i | grep -E "^(date\.timezone|error_log|error_reporting|display_errors|log_errors|max_input_vars|memory_limit|max_execution_time|opcache\.(enable|validate_timestamps|revalidate_freq)) "
 
 .PHONY: open-ports
 open-ports: _ensure_env
@@ -279,16 +279,16 @@ close-sftp: _ensure_env
 
 .PHONY: redis-info
 redis-info:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli info
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli info
 
 .PHONY: redis-monitor
 redis-monitor:
 	@echo "📡 Monitoring Redis commands... (Press Ctrl+C to stop)"
-	@. ./.docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli monitor
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli monitor
 
 .PHONY: redis-ping
 redis-ping:
-	@. ./.docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli ping
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli ping
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
@@ -395,11 +395,11 @@ size-show: _ensure_env
 
 .PHONY: crontab-init
 crontab-init:
-	@if [ ! -f .docker/scripts/crontab ]; then \
-		mkdir -p .docker/scripts; \
-		echo "# m h dom mon dow user  command" > .docker/scripts/crontab; \
-		echo "# * * * * * www-data php /var/www/html/scripts/cron.php" >> .docker/scripts/crontab; \
-		echo "✅ Created example crontab at .docker/scripts/crontab"; \
+	@if [ ! -f docker/scripts/crontab ]; then \
+		mkdir -p docker/scripts; \
+		echo "# m h dom mon dow user  command" > docker/scripts/crontab; \
+		echo "# * * * * * www-data php /var/www/html/scripts/cron.php" >> docker/scripts/crontab; \
+		echo "✅ Created example crontab at docker/scripts/crontab"; \
 	else \
 		echo "ℹ️  crontab file already exists."; \
 	fi

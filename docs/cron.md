@@ -6,11 +6,11 @@ The Docker stack includes a dedicated service named `cron` configured to execute
 
 ## 1. How Does It Work?
 
-The `cron` service uses a lightweight `serversideup/php` CLI image (`.docker/Dockerfile.cron`), which does **not** include Apache or PHP-FPM. This makes it significantly lighter than the main `app` container (~150-200MB less RAM). The `cron` daemon is installed during the Docker build.
+The `cron` service uses a lightweight `serversideup/php` CLI image (`docker/Dockerfile.cron`), which does **not** include Apache or PHP-FPM. This makes it significantly lighter than the main `app` container (~150-200MB less RAM). The `cron` daemon is installed during the Docker build.
 It shares exactly the same network, the same volumes, and the same user as the main application, but its sole mission is to stay running consuming the `cron` daemon.
 
 The heart of the system is the text file:
-**`.docker/scripts/crontab`**
+**`docker/scripts/crontab`**
 
 Everything you write in that file will be interpreted and executed by the cron daemon automatically. **There is no need to rebuild or restart the container when you make changes to this file; the cron daemon will read them live.**
 
@@ -18,7 +18,7 @@ Everything you write in that file will be interpreted and executed by the cron d
 
 ## 2. Adding Tasks (Syntax)
 
-The `.docker/scripts/crontab` file is dynamically mapped to the system inside the path `/etc/cron.d/app-cron`.
+The `docker/scripts/crontab` file is dynamically mapped to the system inside the path `/etc/cron.d/app-cron`.
 
 ⚠️ **Important**: Files under `/etc/cron.d/` **require the username field** after the schedule columns. Always use `www-data` to match the application's file permissions.
 

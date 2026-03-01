@@ -72,8 +72,8 @@ You can enable additional stack features for specific legacy applications via `.
 
 - **Optional Redis Cache**: Add `COMPOSE_PROFILES=redis` to your `.env` to automatically start a lightweight Redis container (powered by Valkey). **[Read the Full Redis Integration Guide here](docs/redis.md).**
 - **Xdebug for Local Dev**: Set `PHP_EXTENSION_XDEBUG=1` in your `.env`. Keep it disabled in production.
-- **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `.docker/scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
-- **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `.docker/php/custom.ini` without modifying the core image.
+- **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `docker/scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
+- **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `docker/php/custom.ini` without modifying the core image.
 - **Verbose Logging**: Adjust `APACHE_LOG_LEVEL=debug` (or `warn` by default) in your `.env` to troubleshoot complex HTTP errors.
 - **Application Error Logs**: ZF1 exceptions are caught by `ErrorController` and invisible in Docker logs by default. See **[Logging Guide](docs/logging.md)** for the required fix and best practices.
 
@@ -81,7 +81,7 @@ You can enable additional stack features for specific legacy applications via `.
 
 ```
 .
-├── .docker/            # Docker configuration files (Apache, PHP, Scripts)
+├── docker/            # Docker configuration files (Apache, PHP, Scripts)
 │   └── scripts/        
 │       └── init-app.sh # Bootstrapper: Rebuilds /tmp structure automatically & generates healthcheck.php
 ├── docs/               # Guides (APP_ENV, Cron, Redis, Sizing)
