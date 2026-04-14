@@ -23,6 +23,7 @@ help:
 	@echo "  config        Validate Docker Compose configuration"
 	@echo "  php-info      Show active PHP configuration in the container (OPcache, Memory, Errors...)"
 	@echo "  db            DB Tools (console, import, export). Run 'make db', 'make db import <file>', 'make db export'"
+	@echo "  db-root       Access database console as root user"
 	@echo "  ctop          Monitor containers using ctop"
 	@echo ""
 	@echo "Port Management:"
@@ -224,6 +225,11 @@ db: _ensure_env
 		echo "🔌 Connecting to database..."; \
 		. ./docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
 	fi
+
+.PHONY: db-root
+db-root: _ensure_env
+	@echo "🔌 Connecting to database as root..."
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_ROOT_PASSWORD} mariadb -u root $${MARIADB_DATABASE}'
 
 .PHONY: ctop
 ctop:
