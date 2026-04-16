@@ -199,7 +199,6 @@ services:
   sftp:
     image: lscr.io/linuxserver/openssh-server:latest
     container_name: ${PROJECT_NAME}-sftp
-    profiles: [ "sftp" ]
     deploy:
       resources:
         limits:
