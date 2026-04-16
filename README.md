@@ -131,5 +131,5 @@ You can enable additional stack features for specific legacy applications via `.
 - **app**: PHP-FPM + Apache (serversideup/php image).
 - **cron**: CLI container to run scheduled tasks.
 - **db**: MariaDB 12.1.2.
-- **sftp**: Secure file transfer (atmoz/sftp), restricted to localhost.
+- **sftp**: Secure file transfer (linuxserver/openssh-server), restricted to localhost.
 - **redis** (Optional): In-memory cache store (Powered by Valkey).
