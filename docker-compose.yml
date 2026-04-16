@@ -197,8 +197,9 @@ services:
 
   # --- SFTP ---
   sftp:
-    image: atmoz/sftp:alpine
+    image: lscr.io/linuxserver/openssh-server:latest
     container_name: ${PROJECT_NAME}-sftp
+    profiles: [ "sftp" ]
     deploy:
       resources:
         limits:
@@ -206,10 +207,18 @@ services:
           memory: 128M
     restart: unless-stopped
     ports:
-      - "${SFTP_BIND_IP:-127.0.0.1}:22${PROJECT_ID}:22" # <--- Controlled by SFTP_BIND_IP and PROJECT_ID in .env
+      - "${SFTP_BIND_IP:-127.0.0.1}:22${PROJECT_ID}:2222" # <--- LSIO image listens on 2222 internally
+    environment:
+      PUID: ${USER_ID:-1000}
+      PGID: ${GROUP_ID:-1000}
+      TZ: ${TZ}
+      USER_NAME: ${SFTP_USER}
+      USER_PASSWORD: ${SFTP_PASS}
+      PASSWORD_ACCESS: "true"
+      SUDO_ACCESS: "false"
     volumes:
-      - ./docroot:/home/${SFTP_USER}/upload
-    command: ${SFTP_USER}:${SFTP_PASS}:${USER_ID:-1000}:${GROUP_ID:-1000}
+      - ./docroot:/config/upload
+      - ./docker/scripts/init-sftp.sh:/custom-cont-init.d/init-sftp.sh:ro
     networks:
       - backnet
 
