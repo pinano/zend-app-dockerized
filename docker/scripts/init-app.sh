@@ -19,15 +19,26 @@ mkdir -p /var/www/html/tmp/cache \
 chown -R www-data:www-data /var/www/html/tmp
 chmod -R 775 /var/www/html/tmp
 
-# --- PHP ERROR LOG FORWARDER ---
-# Workaround for S6 overlay masking FPM worker stderr output.
-# PHP writes errors to a file, and this tail process forwards them to PID 1 (Docker logs).
+# --- LOG FORWARDERS ---
+# Forwards background file logs to Docker logs (PID 1 stdout/stderr)
+# This ensures that even if the app writes to these files, you see them in 'make logs'.
+
+# 1. PHP Error Log (Generic PHP errors)
 PHP_ERROR_LOG=/var/www/html/tmp/php_errors.log
 touch "$PHP_ERROR_LOG"
 chown www-data:www-data "$PHP_ERROR_LOG"
 chmod 664 "$PHP_ERROR_LOG"
 tail -F "$PHP_ERROR_LOG" > /proc/1/fd/2 2>/dev/null &
-echo "✅ PHP error log forwarder started (→ Docker logs)"
+
+# 2. Zend Application Log (Framework-specific errors)
+ZEND_ERROR_LOG=/var/www/html/application/logs/error.log
+mkdir -p "$(dirname "$ZEND_ERROR_LOG")"
+touch "$ZEND_ERROR_LOG"
+chown www-data:www-data "$ZEND_ERROR_LOG"
+chmod 664 "$ZEND_ERROR_LOG"
+tail -F "$ZEND_ERROR_LOG" > /proc/1/fd/1 2>/dev/null &
+
+echo "✅ Log forwarders started (php_errors.log → stderr, zend_error.log → stdout)"
 
 
 echo "✅ Tmp structure initialized."

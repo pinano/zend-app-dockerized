@@ -27,10 +27,7 @@ services:
       - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docker/php/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf:ro
       - ./docroot:/var/www/html
-      - type: tmpfs
-        target: /var/www/html/tmp
-        tmpfs:
-          size: ${APP_TMPFS_SIZE:-128M}
+      - app_tmp:/var/www/html/tmp
     environment:
       # System
       TZ: ${TZ}
@@ -116,10 +113,7 @@ services:
       - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docker/scripts/crontab:/etc/cron.d/app-cron:ro
       - ./docroot:/var/www/html
-      - type: tmpfs
-        target: /var/www/html/tmp
-        tmpfs:
-          size: ${CRON_TMPFS_SIZE:-64M}
+      - app_tmp:/var/www/html/tmp
     environment:
       # System
       TZ: ${TZ}
@@ -247,6 +241,15 @@ services:
     restart: unless-stopped
     networks:
       - backnet
+
+# --- Volumes ---
+volumes:
+  app_tmp:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: "size=${APP_TMPFS_SIZE:-128M},uid=${USER_ID:-1000},gid=${GROUP_ID:-1000}"
 
 # --- Networks ---
 networks:
