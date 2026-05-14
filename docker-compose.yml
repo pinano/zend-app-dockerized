@@ -135,7 +135,8 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-    command: cron -f
+    # Fix permissions for cron.d files (must be owned by root and 644) before starting cron
+    command: sh -c "chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
     restart: unless-stopped
     networks:
       - backnet
