@@ -146,15 +146,22 @@ sync:
 	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required for 'make sync'. Install it with: apt install python3 / brew install python3"; exit 1)
 	@python3 docker/scripts/sync-env.py
 
-.PHONY: logs
+.PHONY: logs logs-apache logs-php logs-zend
 logs:
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
-	if [ "$$SERVICE" = "zend" ]; then \
-		echo "📋 Tailing Zend application log (/var/www/html/tmp/zend_error.log)..."; \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/zend_error.log; \
-	else \
-		. ./docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE; \
-	fi
+	. ./docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE
+
+logs-apache:
+	@echo "📋 Tailing Apache logs (Access & Error)..."
+	@. ./docker/scripts/set-env-vars.sh && docker compose logs -f app
+
+logs-php:
+	@echo "📋 Tailing PHP-FPM error log..."
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/php_errors.log
+
+logs-zend:
+	@echo "📋 Tailing Zend Framework application log..."
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/application/logs/error.log
 
 .PHONY: shell
 shell:
