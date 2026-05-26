@@ -32,6 +32,6 @@ If you reach these limits, it is usually time to transition from a single-host d
 
 ### Step 4: Avoid Port Collisions
 By default, the `docker-compose.yml` only exposes the MariaDB and SFTP ports directly to the `127.0.0.1` host interface for debugging purposes.
-If you are running multiple projects, you **must** change `DB_HOST_PORT` and `SFTP_PORT` in your `.env` file for each project to ensure they don't collide.
-* Example Project A: `DB_HOST_PORT=33001`
-* Example Project B: `DB_HOST_PORT=33002`
+Ports are dynamically assigned using `PROJECT_ID` in your `.env` file: MariaDB binds to `33${PROJECT_ID}` and SFTP to `22${PROJECT_ID}`. Each project **must** have a unique `PROJECT_ID` to prevent port collisions.
+* Example Project A: `PROJECT_ID=001` → DB port `33001`, SFTP port `22001`
+* Example Project B: `PROJECT_ID=002` → DB port `33002`, SFTP port `22002`

@@ -51,8 +51,8 @@ By default, the MariaDB and SFTP ports are bound strictly to `127.0.0.1` for sec
 services:
   db:
     ports:
-      # Expose externally, but map to the specific port defined in .env
-      - "0.0.0.0:${DB_HOST_PORT}:3306" 
+      # Expose externally using the PROJECT_ID-based port scheme
+      - "0.0.0.0:33${PROJECT_ID}:3306" 
 ```
 
 ## Note on Kubernetes

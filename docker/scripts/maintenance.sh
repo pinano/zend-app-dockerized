@@ -1,16 +1,19 @@
 #!/bin/bash
 # maintenance.sh - Periodic cleanup for tmpfs shared volume
 # This script is intended to run inside the cron container.
+# Runs every 15 minutes via the crontab.
 
 TMP_DIR="/var/www/html/tmp"
 
 echo "--- [$(date)] Starting Maintenance Task ---"
 
-# 1. Truncate logs if they are too big (> 10MB)
-# Using :> to truncate preserves the file descriptor for the tail process
+# 1. Truncate logs if they are too big (> 5MB)
+# Using :> to truncate preserves the file descriptor for the tail process.
+# Threshold lowered to 5MB to prevent runaway logs from filling the tmpfs volume,
+# which would cause all cache and session writes to fail (complete outage).
 LOG_FILES=("$TMP_DIR"/*.log "/var/www/html/application/logs/error.log")
 for log in "${LOG_FILES[@]}"; do
-    if [ -f "$log" ] && [ $(stat -c%s "$log") -gt 10485760 ]; then
+    if [ -f "$log" ] && [ $(stat -c%s "$log") -gt 5242880 ]; then
         echo "Truncating large log file: $log"
         : > "$log"
     fi

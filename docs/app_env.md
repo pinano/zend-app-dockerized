@@ -13,7 +13,7 @@ The `serversideup/php` image natively listens to `APP_ENV`:
 - **Aggressive Caching:** OPcache strict protections and performance optimizations are fully enabled, assuming the source code is immutable.
 
 ### `APP_ENV=development`
-- **Error Display:** Code failures instantly render detailed errors with file paths and line numbers directly in the browser (Display Errors On).
+- **Error Routing:** Errors, warnings, and stack traces are written to the internal PHP error log (visible via `make logs-php`) instead of the browser. This prevents information leaks even during development while still capturing all errors.
 - **Relaxed Environment:** Disables strict OPcache protections, forcing PHP to recompile changed files on every request. This lets you live-edit code and see results without restarting the container.
 
 ---

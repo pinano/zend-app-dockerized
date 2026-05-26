@@ -76,22 +76,24 @@ resources.frontController.throwErrors = true
 
 ## Zend application log (`app.logfile`)
 
-The Zend application log (`app.logfile` in `application.ini`) is written to:
+The Zend application log (`app.logfile` in `application.ini`) is typically written to:
 
 ```
-/var/www/html/tmp/zend_error.log   (inside the container)
+/var/www/html/application/logs/error.log   (inside the container)
 ```
 
-This path lives in the container's `tmp` volume (tmpfs), so it is **ephemeral** —
-it resets on container restart. To tail it in real time:
+> ℹ️ The exact path depends on your `application.ini` configuration. The `init-app.sh` script
+> pre-creates this file with correct permissions on startup.
+
+This path lives outside the container's `tmp` volume, so it **persists** across restarts
+(it's under the `docroot` bind mount). To tail it in real time:
 
 ```bash
-make logs zend
+make logs-zend
 ```
 
-> ℹ️ The `tmp/` directory is mounted as tmpfs for performance. If you need to retain
-> the Zend log across restarts, change `app.logfile` in `application.ini` to a path
-> under a bind-mounted volume, or redirect it to `php://stderr` (see below).
+> ℹ️ If you need ephemeral logs that reset on restart, change `app.logfile` in `application.ini`
+> to a path under `/var/www/html/tmp/` (tmpfs), or redirect it to `php://stderr` (see below).
 
 ## Redirecting Zend_Log to stderr (optional)
 

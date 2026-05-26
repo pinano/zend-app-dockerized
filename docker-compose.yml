@@ -7,10 +7,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${APP_CPUS:-1.0}' # Max cores per project (increase if heavy)
-          memory: ${APP_MEMORY:-512M} # Memory limit
+          cpus: '${APP_CPUS:-0.5}' # Max cores per project (increase if heavy)
+          memory: ${APP_MEMORY:-256M} # Memory limit
         reservations:
-          memory: ${APP_MEMORY_RESERVATION:-128M}
+          memory: ${APP_MEMORY_RESERVATION:-64M}
     depends_on:
       db:
         condition: service_healthy
@@ -37,9 +37,11 @@ services:
       LOG_OUTPUT_LEVEL: ${LOG_OUTPUT_LEVEL:-warn}
       # Apache
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
-      APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-1800}
+      APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-300}
       APACHE_LOG_LEVEL: ${APACHE_LOG_LEVEL:-warn}
       APACHE_MAX_REQUEST_WORKERS: ${APACHE_MAX_REQUEST_WORKERS:-10}
+      # Performance Tuning (OPcache - Huge Code Pages)
+      PHP_OPCACHE_HUGE_CODE_PAGES: ${PHP_OPCACHE_HUGE_CODE_PAGES:-0}
       # PHP
       PHP_EXTENSION_XDEBUG: ${PHP_EXTENSION_XDEBUG:-0}
       PHP_DATE_TIMEZONE: ${TZ}
@@ -49,19 +51,24 @@ services:
       PHP_MAX_INPUT_VARS: ${PHP_MAX_INPUT_VARS:-3000}
       PHP_POST_MAX_SIZE: ${PHP_POST_MAX_SIZE:-50M}
       PHP_UPLOAD_MAX_FILE_SIZE: ${PHP_UPLOAD_MAX_FILE_SIZE:-10M}
-      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-512M}
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-128M}
       PHP_MAX_EXECUTION_TIME: ${PHP_MAX_EXECUTION_TIME:-60}
       # Performance Tuning (Realpath)
       PHP_REALPATH_CACHE_TTL: ${PHP_REALPATH_CACHE_TTL:-7200}
       # Performance Tuning (OPcache)
       PHP_OPCACHE_ENABLE: 1
-      PHP_OPCACHE_MEMORY_CONSUMPTION: ${PHP_OPCACHE_MEMORY_CONSUMPTION:-256}
+      PHP_OPCACHE_MEMORY_CONSUMPTION: ${PHP_OPCACHE_MEMORY_CONSUMPTION:-128}
       PHP_OPCACHE_MAX_ACCELERATED_FILES: ${PHP_OPCACHE_MAX_ACCELERATED_FILES:-20000}
       PHP_OPCACHE_VALIDATE_TIMESTAMPS: ${PHP_OPCACHE_VALIDATE_TIMESTAMPS:-${APP_ENV_PHP_OPCACHE_VALIDATE_TIMESTAMPS:-0}}
       PHP_OPCACHE_REVALIDATE_FREQ: ${PHP_OPCACHE_REVALIDATE_FREQ:-${APP_ENV_PHP_OPCACHE_REVALIDATE_FREQ:-60}}
       # PHP-FPM Pool Tuning
+      PHP_FPM_PM: ${PHP_FPM_PM:-dynamic}
       PHP_FPM_PM_MAX_CHILDREN: ${PHP_FPM_PM_MAX_CHILDREN:-10}
+      PHP_FPM_PM_START_SERVERS: ${PHP_FPM_PM_START_SERVERS:-3}
+      PHP_FPM_PM_MIN_SPARE_SERVERS: ${PHP_FPM_PM_MIN_SPARE_SERVERS:-2}
+      PHP_FPM_PM_MAX_SPARE_SERVERS: ${PHP_FPM_PM_MAX_SPARE_SERVERS:-5}
       PHP_FPM_PM_MAX_REQUESTS: ${PHP_FPM_PM_MAX_REQUESTS:-500}
+      PHP_FPM_SLOWLOG_TIMEOUT: ${PHP_FPM_SLOWLOG_TIMEOUT:-10s}
       # Database
       DB_HOST: db
       DB_NAME: ${DB_NAME}
@@ -94,10 +101,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${CRON_CPUS:-0.25}'
-          memory: ${CRON_MEMORY:-256M}
+          cpus: '${CRON_CPUS:-0.1}'
+          memory: ${CRON_MEMORY:-128M}
         reservations:
-          memory: ${CRON_MEMORY_RESERVATION:-64M}
+          memory: ${CRON_MEMORY_RESERVATION:-32M}
     depends_on:
       db:
         condition: service_healthy
@@ -129,14 +136,16 @@ services:
       PHP_ERROR_REPORTING: ${PHP_ERROR_REPORTING:-E_ALL & ~E_NOTICE & ~E_DEPRECATED}
       PHP_MAX_INPUT_VARS: ${PHP_MAX_INPUT_VARS:-3000}
       PHP_MAX_EXECUTION_TIME: 0 # No limit for CLI
-      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-512M}
+      PHP_MEMORY_LIMIT: ${PHP_MEMORY_LIMIT:-128M}
       # Database
       DB_HOST: db
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-    # Fix permissions for cron.d files (must be owned by root and 644) before starting cron
-    command: sh -c "chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
+    # 1. Dump Docker env vars to /etc/environment so cron jobs can access DB_HOST, DB_NAME, etc.
+    #    (The vanilla cron daemon strips all inherited environment variables.)
+    # 2. Fix permissions for cron.d files (must be owned by root and 644) before starting cron.
+    command: sh -c "printenv | grep -E '^(DB_HOST|DB_NAME|DB_USER|DB_PASS|APP_ENV|TZ|PHP_|USER_ID|GROUP_ID)=' > /etc/environment && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
     restart: unless-stopped
     networks:
       - backnet
@@ -147,13 +156,19 @@ services:
     container_name: ${PROJECT_NAME}-db
     command:
       - --default-authentication-plugin=mysql_native_password
+      # sql_mode: STRICT_TRANS_TABLES intentionally omitted for legacy ZF1 compatibility.
+      # Legacy apps written for MySQL 5.x rely on implicit type conversions and silent truncation.
+      # Re-enable STRICT_TRANS_TABLES only after auditing application SQL for strict compliance.
       - --sql_mode=ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
-      - --max-connections=${DB_MAX_CONNECTIONS:-100}
-      - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-256M}
-      - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-64M}
+      - --max-connections=${DB_MAX_CONNECTIONS:-50}
+      - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-128M}
+      - --innodb-buffer-pool-instances=${DB_INNODB_BUFFER_POOL_INSTANCES:-1}
+      - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-32M}
       - --innodb-flush-log-at-trx-commit=${DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT:-2}
       - --innodb-flush-method=O_DIRECT
       - --skip-name-resolve
+      - --table-open-cache=${DB_TABLE_OPEN_CACHE:-2000}
+      - --table-definition-cache=${DB_TABLE_DEFINITION_CACHE:-1400}
       - --join-buffer-size=256K
       - --sort-buffer-size=256K
       - --tmp-table-size=32M
@@ -161,10 +176,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '${DB_CPUS:-2.0}' # MariaDB headroom during peaks
-          memory: ${DB_MEMORY:-1G} # Strict limit to prevent infinite growth
+          cpus: '${DB_CPUS:-1.0}' # MariaDB headroom during peaks
+          memory: ${DB_MEMORY:-512M} # Strict limit to prevent infinite growth
         reservations:
-          memory: ${DB_MEMORY_RESERVATION:-256M}
+          memory: ${DB_MEMORY_RESERVATION:-128M}
     healthcheck:
       test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
       interval: 10s

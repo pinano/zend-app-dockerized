@@ -1,4 +1,4 @@
 .env
 *.sql
-mariadb_data/*
-docroot/*
+mariadb_data/
+docroot/

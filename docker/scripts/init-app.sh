@@ -28,7 +28,13 @@ touch "$PHP_ERROR_LOG"
 chown www-data:www-data "$PHP_ERROR_LOG"
 chmod 664 "$PHP_ERROR_LOG"
 
-# 2. Zend Application Log (Framework-specific errors)
+# 2. PHP-FPM Slow Log (Performance debugging)
+FPM_SLOW_LOG=/var/www/html/tmp/php-fpm-slow.log
+touch "$FPM_SLOW_LOG"
+chown www-data:www-data "$FPM_SLOW_LOG"
+chmod 664 "$FPM_SLOW_LOG"
+
+# 3. Zend Application Log (Framework-specific errors)
 ZEND_ERROR_LOG=/var/www/html/application/logs/error.log
 mkdir -p "$(dirname "$ZEND_ERROR_LOG")"
 touch "$ZEND_ERROR_LOG"
@@ -41,15 +47,34 @@ echo "✅ Log files initialized for separate tailing."
 echo "✅ Tmp structure initialized."
 
 # --- HEALTHCHECK ---
-# Auto-generate a minimal healthcheck.php if it doesn't already exist.
-# This allows Docker healthchecks to verify PHP-FPM is responding without
-# depending on the application's routing or framework.
+# Auto-generate a healthcheck.php that validates both PHP-FPM and database connectivity.
+# This allows Docker healthchecks and Traefik to detect actual service availability,
+# not just that PHP-FPM is responding.
 HEALTHCHECK_FILE="${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/healthcheck.php"
 mkdir -p "$(dirname "$HEALTHCHECK_FILE")"
 if [ ! -f "$HEALTHCHECK_FILE" ]; then
-    echo '<?php http_response_code(200); echo "ok";' > "$HEALTHCHECK_FILE"
+    cat > "$HEALTHCHECK_FILE" <<'HEALTHCHECK_EOF'
+<?php
+// Auto-generated healthcheck — validates PHP-FPM + MariaDB connectivity.
+// Docker healthcheck interval is typically 60s, so one DB connection per minute is negligible.
+try {
+    $pdo = new PDO(
+        'mysql:host=' . getenv('DB_HOST') . ';dbname=' . getenv('DB_NAME'),
+        getenv('DB_USER'),
+        getenv('DB_PASS'),
+        [PDO::ATTR_TIMEOUT => 3, PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+    $pdo->query('SELECT 1');
+    $pdo = null;
+    http_response_code(200);
+    echo 'ok';
+} catch (Exception $e) {
+    http_response_code(503);
+    echo 'db_error';
+}
+HEALTHCHECK_EOF
     chown www-data:www-data "$HEALTHCHECK_FILE"
-    echo "✅ Healthcheck created at $HEALTHCHECK_FILE"
+    echo "✅ Healthcheck created at $HEALTHCHECK_FILE (with DB validation)"
 else
     echo "ℹ️  Healthcheck already exists at $HEALTHCHECK_FILE, skipping."
 fi
@@ -65,19 +90,4 @@ if [ -n "$PHP_ERROR_REPORTING" ]; then
 php_admin_value[error_reporting] = $INT_VAL
 EOF
     echo "✅ PHP error reporting configured dynamically ($INT_VAL)."
-fi
-
-# --- CRON ENVIRONMENT INJECTION ---
-# The vanilla 'cron' daemon strips out all Docker-injected environment variables.
-# We must manually dump them into /etc/environment so scheduled PHP scripts
-# can connect to MariaDB and respect the APP_ENV.
-if [ "$IS_CRON" = "1" ]; then
-    echo "⚙️  Saving environment variables to /etc/environment (cron daemon requires explicit env exports)..."
-    # /etc/environment format: KEY=value (no 'export', no multiline values)
-    # We explicitly list only the variables that cron scripts need.
-    {
-        printenv | grep -E "^(DB_HOST|DB_NAME|DB_USER|DB_PASS|APP_ENV|TZ|PHP_|USER_ID|GROUP_ID)=" \
-            | sed "s/'/'\\\\''/g"
-    } > /etc/environment
-    echo "✅ Created /etc/environment with Docker variables."
 fi
