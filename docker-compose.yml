@@ -24,6 +24,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./docker/apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
+      - ./docker/apache/security.conf:/etc/apache2/conf-enabled/security.conf:ro
       - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
       - ./docker/php/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf:ro
       - ./docroot:/var/www/html

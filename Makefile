@@ -230,10 +230,10 @@ db: _ensure_env
 		fi; \
 		echo "📄 Importing $$FILE into database..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+			. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}' < "$$FILE"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
 		fi; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
@@ -243,10 +243,10 @@ db: _ensure_env
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb-dump --single-transaction -u $${MARIADB_USER} $${MARIADB_DATABASE}' | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
 		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
@@ -254,13 +254,13 @@ db: _ensure_env
 		exit 1; \
 	else \
 		echo "🔌 Connecting to database..."; \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_PASSWORD} mariadb -u $${MARIADB_USER} $${MARIADB_DATABASE}'; \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
 	fi
 
 .PHONY: db-root
 db-root: _ensure_env
 	@echo "🔌 Connecting to database as root..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec db sh -c 'MYSQL_PWD=$${MARIADB_ROOT_PASSWORD} mariadb -u root $${MARIADB_DATABASE}'
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_ROOT_PASS} db mariadb -u root $${DB_NAME}
 
 .PHONY: ctop
 ctop:
