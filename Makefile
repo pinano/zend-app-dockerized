@@ -51,6 +51,11 @@ help:
 	@echo "Cron Management:"
 	@echo "  crontab-init Create example crontab file"
 	@echo ""
+	@echo "Versioning & Updates:"
+	@echo "  release       Generate a new CalVer release, update CHANGELOG.md, and create a git tag"
+	@echo "  update        Fetch and safely upgrade the codebase (usage: make update [version=vX])"
+	@echo "  rollback      Interactively list recent tag versions and rollback to a selected one"
+	@echo ""
 	@echo "Sizing:"
 	@echo "  size-small    Configure .env for low-traffic app (< 500 visits/day)"
 	@echo "  size-medium   Configure .env for medium-traffic app (500-5000 visits/day)"
@@ -367,6 +372,19 @@ redis-monitor: _ensure_env
 .PHONY: redis-ping
 redis-ping: _ensure_env
 	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli ping
+
+# --- Versioning & Updates ---
+.PHONY: release
+release:
+	@./docker/scripts/release.sh
+
+.PHONY: update
+update:
+	@./docker/scripts/update.sh $(version)
+
+.PHONY: rollback
+rollback:
+	@./docker/scripts/rollback.sh
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
