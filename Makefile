@@ -382,38 +382,38 @@ open-ports: _ensure_env
 	@echo "🌐 Opening DB and SFTP ports externally (0.0.0.0)..."
 	$(call set_env,DB_BIND_IP,0.0.0.0)
 	$(call set_env,SFTP_BIND_IP,0.0.0.0)
-	@echo "⚠️  Ports configured to be open. Run 'make restart' or 'docker compose up -d' to apply."
+	@echo "⚠️  Ports configured to be open. Run 'make start' to apply."
 
 .PHONY: close-ports
 close-ports: _ensure_env
 	@echo "🔒 Closing DB and SFTP ports (127.0.0.1)..."
 	$(call set_env,DB_BIND_IP,127.0.0.1)
 	$(call set_env,SFTP_BIND_IP,127.0.0.1)
-	@echo "✅ Ports configured to be closed. Run 'make restart' or 'docker compose up -d' to apply."
+	@echo "✅ Ports configured to be closed. Run 'make start' to apply."
 
 .PHONY: open-db
 open-db: _ensure_env
 	@echo "🌐 Opening DB port externally (0.0.0.0)..."
 	$(call set_env,DB_BIND_IP,0.0.0.0)
-	@echo "⚠️  DB port configured to be open. Run 'make restart' or 'docker compose up -d' to apply."
+	@echo "⚠️  DB port configured to be open. Run 'make start' to apply."
 
 .PHONY: close-db
 close-db: _ensure_env
 	@echo "🔒 Closing DB port (127.0.0.1)..."
 	$(call set_env,DB_BIND_IP,127.0.0.1)
-	@echo "✅ DB port configured to be closed. Run 'make restart' or 'docker compose up -d' to apply."
+	@echo "✅ DB port configured to be closed. Run 'make start' to apply."
 
 .PHONY: open-sftp
 open-sftp: _ensure_env
 	@echo "🌐 Opening SFTP port externally (0.0.0.0)..."
 	$(call set_env,SFTP_BIND_IP,0.0.0.0)
-	@echo "⚠️  SFTP port configured to be open. Run 'make restart' or 'docker compose up -d' to apply."
+	@echo "⚠️  SFTP port configured to be open. Run 'make start' to apply."
 
 .PHONY: close-sftp
 close-sftp: _ensure_env
 	@echo "🔒 Closing SFTP port (127.0.0.1)..."
 	$(call set_env,SFTP_BIND_IP,127.0.0.1)
-	@echo "✅ SFTP port configured to be closed. Run 'make restart' or 'docker compose up -d' to apply."
+	@echo "✅ SFTP port configured to be closed. Run 'make start' to apply."
 
 .PHONY: redis-info
 redis-info: _ensure_env
