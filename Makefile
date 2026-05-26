@@ -292,9 +292,9 @@ php-info: _ensure_env
 .PHONY: opcache-clear
 opcache-clear: _ensure_env
 	@echo "🧹 Clearing OPcache (PHP-FPM)..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > /var/www/html/public/opcache_reset_temp.php'
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app curl -s http://localhost/opcache_reset_temp.php || echo "❌ Failed to query OPcache reset script"
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app rm -f /var/www/html/public/opcache_reset_temp.php
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > $${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php'
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app curl -s http://localhost:8080/opcache_reset_temp.php || echo "❌ Failed to query OPcache reset script"
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app rm -f $${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php
 
 .PHONY: doctor
 doctor: _ensure_env
