@@ -105,6 +105,10 @@ start:
 		$(MAKE) --no-print-directory init || exit 1; \
 	fi
 	@$(MAKE) --no-print-directory validate
+	@PROJ_NAME=$$(. ./docker/scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
+	if [ -n "$$PROJ_NAME" ]; then \
+		docker volume rm $${PROJ_NAME}_app_tmp >/dev/null 2>&1 || true; \
+	fi
 	@echo "🐳 Starting containers..."
 	@. ./docker/scripts/set-env-vars.sh && docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
@@ -145,9 +149,13 @@ validate:
 	@echo "✅ Validation passed successfully!"
 
 .PHONY: stop
-stop:
+stop: _ensure_env
 	@echo "🛑 Stopping containers..."
 	@. ./docker/scripts/set-env-vars.sh && docker compose down --remove-orphans
+	@PROJ_NAME=$$(. ./docker/scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
+	if [ -n "$$PROJ_NAME" ]; then \
+		docker volume rm $${PROJ_NAME}_app_tmp >/dev/null 2>&1 || true; \
+	fi
 	@echo "✅ Stack is down!"
 
 .PHONY: restart
