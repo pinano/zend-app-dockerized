@@ -313,12 +313,67 @@ doctor: _ensure_env
 	@PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1); \
 	DB_PORT="33$$PROJECT_ID"; \
 	SFTP_PORT="22$$PROJECT_ID"; \
+	DB_BIND=$$(grep '^DB_BIND_IP=' .env | cut -d= -f2 | head -1); \
+	DB_BIND=$${DB_BIND:-127.0.0.1}; \
+	SFTP_BIND=$$(grep '^SFTP_BIND_IP=' .env | cut -d= -f2 | head -1); \
+	SFTP_BIND=$${SFTP_BIND:-127.0.0.1}; \
+	DB_CID=$$(. ./docker/scripts/set-env-vars.sh && docker compose ps -q db 2>/dev/null || true); \
+	SFTP_CID=$$(. ./docker/scripts/set-env-vars.sh && docker compose ps -q sftp 2>/dev/null || true); \
+	DB_OWNED=0; \
+	SFTP_OWNED=0; \
+	if [ -n "$$DB_CID" ] && docker port "$$DB_CID" 2>/dev/null | grep -q ":$$DB_PORT"; then DB_OWNED=1; fi; \
+	if [ -n "$$SFTP_CID" ] && docker port "$$SFTP_CID" 2>/dev/null | grep -q ":$$SFTP_PORT"; then SFTP_OWNED=1; fi; \
 	if command -v ss >/dev/null 2>&1; then \
-		if ss -tln | grep -q ":$$DB_PORT "; then echo "⚠️  Warning: Port $$DB_PORT is already in use on the host!"; else echo "✅ DB Port $$DB_PORT is available"; fi; \
-		if ss -tln | grep -q ":$$SFTP_PORT "; then echo "⚠️  Warning: Port $$SFTP_PORT is already in use on the host!"; else echo "✅ SFTP Port $$SFTP_PORT is available"; fi; \
+		DB_PORT_IN_USE=$$(ss -tln | grep -q ":$$DB_PORT " && echo 1 || echo 0); \
+		SFTP_PORT_IN_USE=$$(ss -tln | grep -q ":$$SFTP_PORT " && echo 1 || echo 0); \
 	elif command -v netstat >/dev/null 2>&1; then \
-		if netstat -tln | grep -q ":$$DB_PORT "; then echo "⚠️  Warning: Port $$DB_PORT is already in use on the host!"; else echo "✅ DB Port $$DB_PORT is available"; fi; \
-		if netstat -tln | grep -q ":$$SFTP_PORT "; then echo "⚠️  Warning: Port $$SFTP_PORT is already in use on the host!"; else echo "✅ SFTP Port $$SFTP_PORT is available"; fi; \
+		DB_PORT_IN_USE=$$(netstat -tln | grep -q ":$$DB_PORT " && echo 1 || echo 0); \
+		SFTP_PORT_IN_USE=$$(netstat -tln | grep -q ":$$SFTP_PORT " && echo 1 || echo 0); \
+	else \
+		DB_PORT_IN_USE=0; \
+		SFTP_PORT_IN_USE=0; \
+	fi; \
+	if [ "$$DB_BIND" = "0.0.0.0" ]; then \
+		if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
+			if [ "$$DB_OWNED" -eq 1 ]; then \
+				echo "✅ DB Port $$DB_PORT is OPEN externally (0.0.0.0) and in use by this project (normal)"; \
+			else \
+				echo "⚠️  WARNING: Port $$DB_PORT is configured to be OPEN externally but is occupied by another process/project!"; \
+			fi; \
+		else \
+			echo "✅ DB Port $$DB_PORT is configured to be OPEN externally (0.0.0.0) and is available"; \
+		fi; \
+	else \
+		if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
+			if [ "$$DB_OWNED" -eq 1 ]; then \
+				echo "🔒 DB Port $$DB_PORT is RESTRICTED to localhost (127.0.0.1) in this project (normal)"; \
+			else \
+				echo "⚠️  WARNING: Port $$DB_PORT is restricted to localhost but is occupied by another process/project!"; \
+			fi; \
+		else \
+			echo "🔒 DB Port $$DB_PORT is not open externally in this project (restricted to localhost)"; \
+		fi; \
+	fi; \
+	if [ "$$SFTP_BIND" = "0.0.0.0" ]; then \
+		if [ "$$SFTP_PORT_IN_USE" -eq 1 ]; then \
+			if [ "$$SFTP_OWNED" -eq 1 ]; then \
+				echo "✅ SFTP Port $$SFTP_PORT is OPEN externally (0.0.0.0) and in use by this project (normal)"; \
+			else \
+				echo "⚠️  WARNING: Port $$SFTP_PORT is configured to be OPEN externally but is occupied by another process/project!"; \
+			fi; \
+		else \
+			echo "✅ SFTP Port $$SFTP_PORT is configured to be OPEN externally (0.0.0.0) and is available"; \
+		fi; \
+	else \
+		if [ "$$SFTP_PORT_IN_USE" -eq 1 ]; then \
+			if [ "$$SFTP_OWNED" -eq 1 ]; then \
+				echo "🔒 SFTP Port $$SFTP_PORT is RESTRICTED to localhost (127.0.0.1) in this project (normal)"; \
+			else \
+				echo "⚠️  WARNING: Port $$SFTP_PORT is restricted to localhost but is occupied by another process/project!"; \
+			fi; \
+		else \
+			echo "🔒 SFTP Port $$SFTP_PORT is not open externally in this project (restricted to localhost)"; \
+		fi; \
 	fi
 	@echo "─────────────────────────────────"
 
