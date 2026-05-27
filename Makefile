@@ -1,67 +1,66 @@
 # Makefile for Dockerized Zend Framework 1.x App
 
 # Default target
+# Colors for help menu
+BOLD  := \033[1m
+CYAN  := \033[36m
+RESET := \033[0m
+
 .PHONY: help
 help:
-	@echo "Usage: make [target]"
-	@echo ""
-	@echo "Targets:"
-	@echo "  help          Show this help message"
-	@echo "  init          Initialize environment (.env)"
-	@echo "  start         Start the stack (creates & validates .env if missing)"
-	@echo "  stop          Stop the stack and remove orphans"
-	@echo "  restart       Restart the stack"
-	@echo "  rebuild       Rebuild services from Dockerfile (usage: make rebuild [service])"
-	@echo "  status        Show stack status (docker compose ps)"
-	@echo "  services      List available services"
-	@echo "  validate      Validate .env against minimum requirements"
-	@echo "  sync          Synchronize .env with .env.dist (Add missing keys)"
-	@echo "  doctor        Run diagnostic checks (port conflicts, host transparent huge pages)"
-	@echo "  opcache-clear Clear OPcache for PHP-FPM pool (zero-downtime flush)"
-	@echo "  shell         Open a shell in a container (usage: make shell [service], default: app)"
-	@echo "  pull          Pull latest images"
-	@echo "  clean         Clean up everything, removing volumes (Requires confirmation)"
-	@echo "  config        Validate Docker Compose configuration"
-	@echo "  php-info      Show active PHP configuration in the container (OPcache, Memory, Errors...)"
-	@echo "  db            DB Tools (console, import, export). Run 'make db', 'make db import <file>', 'make db export'"
-	@echo "  db-root       Access database console as root user"
-	@echo "  ctop          Monitor containers using ctop"
-	@echo ""
-	@echo "Logging:"
-	@echo "  logs          Follow logs for all containers or a specific service (usage: make logs [service])"
-	@echo "  logs-apache   Follow Apache access and error logs (standard Docker stream)"
-	@echo "  logs-php      Follow PHP-FPM error log directly"
-	@echo "  logs-zend     Follow Zend Framework application log directly"
-	@echo "  logs-slow     Follow PHP-FPM slow log (requests exceeding slowlog timeout)"
-	@echo ""
-	@echo "Port Management:"
-	@echo "  open-ports    Open DB & SFTP ports to the outside world (0.0.0.0)"
-	@echo "  close-ports   Close DB & SFTP ports (restrict to 127.0.0.1)"
-	@echo "  open-db       Open only DB port"
-	@echo "  close-db      Close only DB port"
-	@echo "  open-sftp     Open only SFTP port"
-	@echo "  close-sftp    Close only SFTP port"
+	@printf "$(BOLD)Usage:$(RESET) make [target] [service]\n"
+	@printf "For detailed help on any command, run: make <target> help\n\n"
+	@printf "$(BOLD)General$(RESET)\n"
+	@printf "  $(CYAN)help$(RESET)          Show this help message\n"
+	@printf "  $(CYAN)doctor$(RESET)        Run diagnostic checks (port conflicts, host transparent huge pages)\n"
+	@printf "  $(CYAN)status$(RESET)        Show stack status (docker compose ps)\n"
+	@printf "  $(CYAN)services$(RESET)      List available services\n"
+	@printf "  $(CYAN)config$(RESET)        Validate Docker Compose configuration\n\n"
+	@printf "$(BOLD)Core Lifecycle$(RESET)\n"
+	@printf "  $(CYAN)start$(RESET)         Start the stack (creates, syncs & validates .env if missing)\n"
+	@printf "  $(CYAN)stop$(RESET)          Stop the stack and remove orphans\n"
+	@printf "  $(CYAN)restart$(RESET)       Restart the stack\n"
+	@printf "  $(CYAN)rebuild$(RESET)       Rebuild services from Dockerfile (usage: make rebuild [service])\n"
+	@printf "  $(CYAN)pull$(RESET)          Pull latest images\n"
+	@printf "  $(CYAN)clean$(RESET)         Clean up everything, removing volumes (requires confirmation)\n\n"
+	@printf "$(BOLD)Shell & Logs$(RESET)\n"
+	@printf "  $(CYAN)shell$(RESET)         Open a shell in a container (usage: make shell [service], default: app)\n"
+	@printf "  $(CYAN)logs$(RESET)          Follow logs for all containers or a specific service (usage: make logs [service])\n"
+	@printf "  $(CYAN)logs-apache$(RESET)   Follow Apache access and error logs\n"
+	@printf "  $(CYAN)logs-php$(RESET)      Follow PHP-FPM error log directly\n"
+	@printf "  $(CYAN)logs-zend$(RESET)     Follow Zend Framework application log directly\n"
+	@printf "  $(CYAN)logs-slow$(RESET)     Follow PHP-FPM slow log\n\n"
+	@printf "$(BOLD)Database & Tools$(RESET)\n"
+	@printf "  $(CYAN)db$(RESET)            DB Tools (console, import, export). Run 'make db', 'make db import <file>', 'make db export'\n"
+	@printf "  $(CYAN)db-root$(RESET)       Access database console as root user\n"
+	@printf "  $(CYAN)opcache-clear$(RESET) Clear OPcache for PHP-FPM pool (zero-downtime flush)\n"
+	@printf "  $(CYAN)php-info$(RESET)      Show active PHP configuration in the container\n"
+	@printf "  $(CYAN)ctop$(RESET)          Monitor containers using ctop\n\n"
+	@printf "$(BOLD)Port Management$(RESET)\n"
+	@printf "  $(CYAN)open-ports$(RESET)    Open DB & SFTP ports to the outside world (0.0.0.0)\n"
+	@printf "  $(CYAN)close-ports$(RESET)   Close DB & SFTP ports (restrict to 127.0.0.1)\n"
+	@printf "  $(CYAN)open-db$(RESET)       Open only DB port\n"
+	@printf "  $(CYAN)close-db$(RESET)      Close only DB port\n"
+	@printf "  $(CYAN)open-sftp$(RESET)     Open only SFTP port\n"
+	@printf "  $(CYAN)close-sftp$(RESET)    Close only SFTP port\n\n"
+	@printf "$(BOLD)Sizing Profiles$(RESET)\n"
+	@printf "  $(CYAN)size-small$(RESET)    Configure .env for low-traffic app (< 500 visits/day)\n"
+	@printf "  $(CYAN)size-medium$(RESET)   Configure .env for medium-traffic app (500-5000 visits/day)\n"
+	@printf "  $(CYAN)size-large$(RESET)    Configure .env for high-traffic app (> 5000 visits/day)\n"
+	@printf "  $(CYAN)size-show$(RESET)     Show current sizing configuration\n\n"
+	@printf "$(BOLD)Cron Management$(RESET)\n"
+	@printf "  $(CYAN)crontab-init$(RESET)  Create example crontab file\n\n"
+	@printf "$(BOLD)Versioning & Updates$(RESET)\n"
+	@printf "  $(CYAN)release$(RESET)       Generate a new CalVer release, update CHANGELOG.md, and create a git tag\n"
+	@printf "  $(CYAN)update$(RESET)        Fetch and safely upgrade the codebase (usage: make update [version=vX])\n"
+	@printf "  $(CYAN)rollback$(RESET)      Interactively list recent tag versions and rollback to a selected one\n"
 	@if docker compose config --services 2>/dev/null | grep -q 'redis'; then \
-		echo ""; \
-		echo "Redis Management:"; \
-		echo "  redis-info    Show Redis server statistics"; \
-		echo "  redis-monitor Monitor Redis commands in real-time"; \
-		echo "  redis-ping    Ping Redis server"; \
+		printf "\n$(BOLD)Redis Management$(RESET)\n"; \
+		printf "  $(CYAN)redis-info$(RESET)    Show Redis server statistics\n"; \
+		printf "  $(CYAN)redis-monitor$(RESET) Monitor Redis commands in real-time\n"; \
+		printf "  $(CYAN)redis-ping$(RESET)    Ping Redis server\n"; \
 	fi
-	@echo ""
-	@echo "Cron Management:"
-	@echo "  crontab-init Create example crontab file"
-	@echo ""
-	@echo "Versioning & Updates:"
-	@echo "  release       Generate a new CalVer release, update CHANGELOG.md, and create a git tag"
-	@echo "  update        Fetch and safely upgrade the codebase (usage: make update [version=vX])"
-	@echo "  rollback      Interactively list recent tag versions and rollback to a selected one"
-	@echo ""
-	@echo "Sizing:"
-	@echo "  size-small    Configure .env for low-traffic app (< 500 visits/day)"
-	@echo "  size-medium   Configure .env for medium-traffic app (500-5000 visits/day)"
-	@echo "  size-large    Configure .env for high-traffic app (> 5000 visits/day)"
-	@echo "  size-show     Show current sizing configuration"
+	@printf "\n"
 
 .PHONY: init
 init:
