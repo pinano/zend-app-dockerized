@@ -109,6 +109,8 @@ init:
 start:
 	@if [ ! -f .env ]; then \
 		$(MAKE) --no-print-directory init || exit 1; \
+	else \
+		$(MAKE) --no-print-directory sync || exit 1; \
 	fi
 	@$(MAKE) --no-print-directory validate
 	@PROJ_NAME=$$(. ./docker/scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
