@@ -1,3 +1,8 @@
+## v2026.05.27.2 (2026-05-27)
+
+- refactor: enhance Makefile help menu with color coding, categorization, and comprehensive command listing (79de12c)
+- chore: update Makefile start command, add service profiles to docker-compose, and reorganize .env.dist variables (967cdf6)
+
 ## v2026.05.27.1 (2026-05-27)
 
 - refactor: enhance security headers, optimize PHP performance tuning, and improve environment validation and debugging tools. (8311537)
