@@ -1,3 +1,7 @@
+## v2026.05.27.1 (2026-05-27)
+
+- refactor: enhance security headers, optimize PHP performance tuning, and improve environment validation and debugging tools. (8311537)
+
 ## v2026.05.27 (2026-05-27)
 
 - refactor: move Zend Framework rewrite rules to VirtualHost level for improved reliability and configuration robustness (bca2942)
