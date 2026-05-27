@@ -1,3 +1,11 @@
+## v2026.05.27 (2026-05-27)
+
+- refactor: move Zend Framework rewrite rules to VirtualHost level for improved reliability and configuration robustness (bca2942)
+- perf: optimize Apache by disabling AllowOverride and inlining ZF1 rewrite rules to prevent per-request filesystem walks (90e966f)
+- refactor: update port configuration helper messages to suggest make start command (2e8939f)
+- feat: enhance port availability checks to account for local versus public binding and container ownership (9f1df2d)
+- refactor: update opcache-clear script to use configurable document root and port 8080 (0705c99)
+
 ## v2026.05.26 (2026-05-26)
 
 - feat: add automated release, update, and rollback scripts with Makefile integration (4cf8ec8)
