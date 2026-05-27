@@ -84,7 +84,21 @@ fi
 # FPM cannot parse PHP language constants natively via env vars.
 if [ -n "$PHP_ERROR_REPORTING" ]; then
     echo "⚙️  Evaluating PHP_ERROR_REPORTING to integer for FPM pool..."
-    INT_VAL=$(php -r "echo ($PHP_ERROR_REPORTING);")
+    INT_VAL=$(php -r '
+        $expr = trim(getenv("PHP_ERROR_REPORTING"), "\"\x27");
+        if (empty($expr)) {
+            echo E_ALL & ~E_NOTICE & ~E_DEPRECATED;
+            exit;
+        }
+        if (preg_match("/^[a-zA-Z0-9_\s&~|()]+$/", $expr)) {
+            $val = eval("return $expr;");
+            if ($val !== false) {
+                echo $val;
+                exit;
+            }
+        }
+        echo E_ALL & ~E_NOTICE & ~E_DEPRECATED;
+    ')
     cat > /usr/local/etc/php-fpm.d/99-dynamic-error-reporting.conf <<EOF
 [www]
 php_admin_value[error_reporting] = $INT_VAL

@@ -28,7 +28,7 @@ RUN chmod +x /etc/entrypoint.d/99-init-app.sh
 # -----------------
 
 # Install required PHP extensions with root permissions
-RUN install-php-extensions exif imagick gd intl
+RUN install-php-extensions exif imagick gd intl xdebug
 
 # IMPORTANT: We do NOT use "USER www-data" here.
 # Leaving the user as root allows the entrypoint script to configure Apache modules

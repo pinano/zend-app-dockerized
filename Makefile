@@ -32,6 +32,7 @@ help:
 	@echo "  logs-apache   Follow Apache access and error logs (standard Docker stream)"
 	@echo "  logs-php      Follow PHP-FPM error log directly"
 	@echo "  logs-zend     Follow Zend Framework application log directly"
+	@echo "  logs-slow     Follow PHP-FPM slow log (requests exceeding slowlog timeout)"
 	@echo ""
 	@echo "Port Management:"
 	@echo "  open-ports    Open DB & SFTP ports to the outside world (0.0.0.0)"
@@ -151,6 +152,15 @@ validate:
 			echo "⚠️  WARNING: DB_MAX_CONNECTIONS ($$MAX_CONN) < PHP_FPM_PM_MAX_CHILDREN × 3 ($$MIN_CONN). Some ZF1 apps open multiple DB connections per request."; \
 		fi; \
 	fi
+	@TMPFS=$$(grep '^APP_TMPFS_SIZE=' .env | cut -d= -f2 | head -1 | sed 's/[Mm]$$//'); \
+	if [ -n "$$TMPFS" ] && [ "$$TMPFS" -lt 64 ]; then \
+		echo "⚠️  WARNING: APP_TMPFS_SIZE ($${TMPFS}M) is very small. Recommend at least 128M for session and cache files."; \
+	fi
+	@APP_ENV=$$(grep '^APP_ENV=' .env | cut -d= -f2 | head -1); \
+	FLUSH=$$(grep '^DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT=' .env | cut -d= -f2 | head -1); \
+	if [ "$$APP_ENV" = "production" ] && [ "$$FLUSH" = "2" ]; then \
+		echo "⚠️  WARNING: DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT=2 in production risks losing up to 1s of transactions on crash. Set to 1 for full ACID compliance."; \
+	fi
 	@echo "✅ Validation passed successfully!"
 
 .PHONY: stop
@@ -199,6 +209,10 @@ logs-php: _ensure_env
 logs-zend: _ensure_env
 	@echo "📋 Tailing Zend Framework application log..."
 	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/application/logs/error.log
+
+logs-slow: _ensure_env
+	@echo "📋 Tailing PHP-FPM slow log (requests exceeding PHP_FPM_SLOWLOG_TIMEOUT)..."
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 50 -f /var/www/html/tmp/php-fpm-slow.log
 
 .PHONY: shell
 shell: _ensure_env
@@ -286,8 +300,12 @@ ctop:
 
 .PHONY: php-info
 php-info: _ensure_env
-	@echo "🔍 Active PHP Configuration (CLI context):"
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec app php -i | grep -E "^(date\.timezone|error_log|error_reporting|display_errors|log_errors|max_input_vars|memory_limit|max_execution_time|opcache\.(enable|validate_timestamps|revalidate_freq)) "
+	@echo "🔍 Active PHP/FPM Configuration (via HTTP request to the running pool):"
+	@. ./docker/scripts/set-env-vars.sh && \
+		DOC_ROOT=$$(docker compose exec -T app printenv APACHE_DOCUMENT_ROOT 2>/dev/null || echo "/var/www/html/public") && \
+		docker compose exec -T app sh -c "echo '<?php echo \"date.timezone=\" . ini_get(\"date.timezone\") . \"\\n\"; echo \"error_log=\" . ini_get(\"error_log\") . \"\\n\"; echo \"error_reporting=\" . ini_get(\"error_reporting\") . \"\\n\"; echo \"display_errors=\" . ini_get(\"display_errors\") . \"\\n\"; echo \"log_errors=\" . ini_get(\"log_errors\") . \"\\n\"; echo \"max_input_vars=\" . ini_get(\"max_input_vars\") . \"\\n\"; echo \"memory_limit=\" . ini_get(\"memory_limit\") . \"\\n\"; echo \"realpath_cache_size=\" . ini_get(\"realpath_cache_size\") . \"\\n\"; echo \"opcache.enable=\" . ini_get(\"opcache.enable\") . \"\\n\"; echo \"opcache.memory_consumption=\" . ini_get(\"opcache.memory_consumption\") . \"\\n\"; echo \"opcache.interned_strings_buffer=\" . ini_get(\"opcache.interned_strings_buffer\") . \"\\n\"; echo \"opcache.validate_timestamps=\" . ini_get(\"opcache.validate_timestamps\") . \"\\n\"; echo \"opcache.revalidate_freq=\" . ini_get(\"opcache.revalidate_freq\") . \"\\n\";' > $$DOC_ROOT/phpinfo_temp.php" && \
+		docker compose exec -T app curl -sf http://localhost:8080/phpinfo_temp.php && \
+		docker compose exec -T app rm -f $$DOC_ROOT/phpinfo_temp.php
 
 .PHONY: opcache-clear
 opcache-clear: _ensure_env
@@ -482,10 +500,12 @@ size-small: _ensure_env
 	$(call set_env,DB_TABLE_DEFINITION_CACHE,1400)
 	$(call set_env,PHP_MEMORY_LIMIT,128M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,128)
+	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,16)
+	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,20000)
 	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,0)
 	$(call set_env,APP_TMPFS_SIZE,128M)
 	$(call set_env,APACHE_MAX_REQUEST_WORKERS,10)
-	$(call set_env,PHP_FPM_PM,dynamic)
+	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
 	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,10)
 	$(call set_env,PHP_FPM_PM_START_SERVERS,3)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,2)
@@ -514,10 +534,12 @@ size-medium: _ensure_env
 	$(call set_env,DB_TABLE_DEFINITION_CACHE,1400)
 	$(call set_env,PHP_MEMORY_LIMIT,256M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,256)
+	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,32)
+	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,30000)
 	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,0)
 	$(call set_env,APP_TMPFS_SIZE,256M)
 	$(call set_env,APACHE_MAX_REQUEST_WORKERS,25)
-	$(call set_env,PHP_FPM_PM,dynamic)
+	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
 	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,25)
 	$(call set_env,PHP_FPM_PM_START_SERVERS,8)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,5)
@@ -546,10 +568,12 @@ size-large: _ensure_env
 	$(call set_env,DB_TABLE_DEFINITION_CACHE,2000)
 	$(call set_env,PHP_MEMORY_LIMIT,512M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
+	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,64)
+	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,60000)
 	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,1)
 	$(call set_env,APP_TMPFS_SIZE,512M)
 	$(call set_env,APACHE_MAX_REQUEST_WORKERS,50)
-	$(call set_env,PHP_FPM_PM,dynamic)
+	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
 	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,50)
 	$(call set_env,PHP_FPM_PM_START_SERVERS,15)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,10)
@@ -577,8 +601,8 @@ size-show: _ensure_env
 	@echo "  Cron:  CPU=$$(grep '^CRON_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^CRON_MEMORY=' .env | cut -d= -f2)"
 	@echo "  DB:    CPU=$$(grep '^DB_CPUS=' .env | cut -d= -f2)  MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2)  BufferPool=$$(grep '^DB_INNODB_BUFFER_POOL_SIZE=' .env | cut -d= -f2)  LogFile=$$(grep '^DB_INNODB_LOG_FILE_SIZE=' .env | cut -d= -f2)  MaxConn=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2)"
 	@echo "  DB:    TableOpenCache=$$(grep '^DB_TABLE_OPEN_CACHE=' .env | cut -d= -f2)  TableDefCache=$$(grep '^DB_TABLE_DEFINITION_CACHE=' .env | cut -d= -f2)  BPInstances=$$(grep '^DB_INNODB_BUFFER_POOL_INSTANCES=' .env | cut -d= -f2)"
-	@echo "  PHP:   MemLimit=$$(grep '^PHP_MEMORY_LIMIT=' .env | cut -d= -f2)  OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB  HugePages=$$(grep '^PHP_OPCACHE_HUGE_CODE_PAGES=' .env | cut -d= -f2)"
-	@echo "  FPM:   PM=$$(grep '^PHP_FPM_PM=' .env | cut -d= -f2)  MaxChildren=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2)  Start=$$(grep '^PHP_FPM_PM_START_SERVERS=' .env | cut -d= -f2)  MinSpare=$$(grep '^PHP_FPM_PM_MIN_SPARE_SERVERS=' .env | cut -d= -f2)  MaxSpare=$$(grep '^PHP_FPM_PM_MAX_SPARE_SERVERS=' .env | cut -d= -f2)"
+	@echo "  PHP:   MemLimit=$$(grep '^PHP_MEMORY_LIMIT=' .env | cut -d= -f2)  OPcache=$$(grep '^PHP_OPCACHE_MEMORY_CONSUMPTION=' .env | cut -d= -f2)MB  InternedStrings=$$(grep '^PHP_OPCACHE_INTERNED_STRINGS_BUFFER=' .env | cut -d= -f2)MB  MaxAcceleratedFiles=$$(grep '^PHP_OPCACHE_MAX_ACCELERATED_FILES=' .env | cut -d= -f2)  HugePages=$$(grep '^PHP_OPCACHE_HUGE_CODE_PAGES=' .env | cut -d= -f2)"
+	@echo "  FPM:   PM=$$(grep '^PHP_FPM_PM_CONTROL=' .env | cut -d= -f2)  MaxChildren=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2)  Start=$$(grep '^PHP_FPM_PM_START_SERVERS=' .env | cut -d= -f2)  MinSpare=$$(grep '^PHP_FPM_PM_MIN_SPARE_SERVERS=' .env | cut -d= -f2)  MaxSpare=$$(grep '^PHP_FPM_PM_MAX_SPARE_SERVERS=' .env | cut -d= -f2)"
 	@echo "─────────────────────────────────"
 
 .PHONY: crontab-init
