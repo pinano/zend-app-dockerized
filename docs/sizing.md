@@ -31,7 +31,7 @@ The table below shows all variables configured by each profile:
 | `PHP_OPCACHE_HUGE_CODE_PAGES` | OPcache Huge Code Pages (1=on, 0=off) | `0` | `0` | `1` |
 | **Apache & PHP-FPM** | | | | |
 | `APACHE_MAX_REQUEST_WORKERS` | Max concurrent Apache threads (aligns with FPM) | `10` | `25` | `50` |
-| `PHP_FPM_PM` | PHP-FPM process manager type | `dynamic` | `dynamic` | `dynamic` |
+| `PHP_FPM_PM_CONTROL` | PHP-FPM process manager type | `dynamic` | `dynamic` | `dynamic` |
 | `PHP_FPM_PM_MAX_CHILDREN` | Max PHP-FPM worker processes | `10` | `25` | `50` |
 | `PHP_FPM_PM_START_SERVERS` | Initial worker processes spawned | `3` | `8` | `15` |
 | `PHP_FPM_PM_MIN_SPARE_SERVERS`| Min idle worker processes | `2` | `5` | `10` |

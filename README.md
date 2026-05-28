@@ -1,4 +1,22 @@
-# Dockerized Legacy ZF1 Application
+<p align="center">
+  <img src="docs/badge.webp" alt="Dockerized Zend App Logo" width="220" />
+</p>
+
+<h1 align="center">Dockerized Legacy ZF1 Application</h1>
+
+<p align="center">
+  <strong>🚀 Docking Legacy to the Future: A modern, ultra-performance Docker orchestration for legacy Zend Framework 1.x systems.</strong>
+</p>
+
+<p align="center">
+  <a href="file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" /></a>
+  <img src="https://img.shields.io/badge/PHP-5.6%20|%207.4%20|%208.x-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP Versions" />
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB" />
+  <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Apache-D22128?style=for-the-badge&logo=apache&logoColor=white" alt="Apache" />
+  <img src="https://img.shields.io/badge/GNU%20Make-000000?style=for-the-badge&logo=gnu&logoColor=white" alt="GNU Make" />
+</p>
 
 A modernized Docker stack for running legacy Zend Framework 1.x applications, featuring optimized performance, secure defaults, and easy management via `make`.
 
@@ -71,7 +89,7 @@ For detailed sizing profiles (Small/Medium/Large) and capacity planning, see the
 You can enable additional stack features for specific legacy applications via `.env` or configuration files:
 
 - **Optional Redis Cache**: Add `COMPOSE_PROFILES=redis` to your `.env` to automatically start a lightweight Redis container (powered by Valkey). **[Read the Full Redis Integration Guide here](docs/redis.md).**
-- **Xdebug for Local Dev**: Set `PHP_EXTENSION_XDEBUG=1` in your `.env`. Keep it disabled in production.
+- **Xdebug for Local Dev**: Set `PHP_XDEBUG_MODE=debug` (or another mode like `develop`) in your `.env`. Keep it disabled in production.
 - **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `docker/scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
 - **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `docker/php/custom.ini` without modifying the core image.
 - **Verbose Logging**: Adjust `APACHE_LOG_LEVEL=debug` (or `warn` by default) in your `.env` to troubleshoot complex HTTP errors.
@@ -106,7 +124,10 @@ You can enable additional stack features for specific legacy applications via `.
 | `make services` | List available services |
 | `make validate` | Validate `.env` against minimum requirements |
 | `make sync` | Synchronize `.env` with `.env.dist` (Add missing keys) |
-| `make logs [svr\|zend]` | Container logs (all or specific service) or Zend app log (`zend`) |
+| `make logs [svr]` | Container logs for all or a specific service (e.g. `app`, `db`) |
+| `make logs-zend` | Follow the Zend Framework application log file directly |
+| `make logs-php` | Follow the PHP-FPM error log file directly |
+| `make logs-apache` | Follow Apache access and error logs |
 | `make shell <svr>` | Access container shell (defaults to `app`) |
 | `make pull` | Pull latest images |
 | `make clean` | Clean configs and volumes (requires confirmation) |
@@ -130,6 +151,10 @@ You can enable additional stack features for specific legacy applications via `.
 
 - **app**: PHP-FPM + Apache (serversideup/php image).
 - **cron**: CLI container to run scheduled tasks.
-- **db**: MariaDB 12.1.2.
+- **db**: MariaDB 12.2.2.
 - **sftp**: Secure file transfer (linuxserver/openssh-server), restricted to localhost.
 - **redis** (Optional): In-memory cache store (Powered by Valkey).
+
+## License
+
+This project is open-source and licensed under the [MIT License](LICENSE).

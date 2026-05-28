@@ -5,17 +5,17 @@ There are two types of logs to monitor in this stack:
 | Type | Command |
 |---|---|
 | Docker container logs (Apache, PHP errors, `error_log()`) | `make logs app` |
-| Zend application log (`Zend_Log` to file) | `make logs zend` |
+| Zend application log (`Zend_Log` to file) | `make logs-zend` |
 
 ```bash
 make logs         # follow all container logs (all services)
 make logs app     # follow only the app container
-make logs zend    # tail the Zend application log inside the container
+make logs-zend    # tail the Zend application log inside the container
 ```
 
 ## What appears automatically
 
-| Source | Visible in `make logs app`? | Visible in `make logs zend`? |
+| Source | Visible in `make logs app`? | Visible in `make logs-zend`? |
 |---|---|---|
 | Apache access log (every request + status code) | ✅ Yes | ❌ No |
 | PHP fatal / parse errors | ✅ Yes | ❌ No |

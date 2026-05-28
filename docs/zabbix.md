@@ -1,104 +1,104 @@
-# Monitorización con Zabbix Agent 2 (Host)
+# Monitoring with Zabbix Agent 2 (Host)
 
-Esta guía explica cómo configurar tu servidor Docker (host) para monitorizar los distintos stacks basados en Zend Framework con Zabbix 7 utilizando **Zabbix Agent 2**.
+This guide explains how to configure your Docker server (host) to monitor the different Zend Framework-based stacks with Zabbix 7 using **Zabbix Agent 2**.
 
-Al utilizar Zabbix Agent 2 desde el host, podrás acceder tanto a los recursos a nivel de sistema como a las métricas del socket de Docker, permitiendo una monitorización detallada de la salud de cada contenedor, CPU, RAM y de servicios específicos como **MariaDB**, **PHP-FPM** y la disponibilidad web (**Healthcheck**).
+By using Zabbix Agent 2 from the host, you can access both system-level resources and Docker socket metrics, allowing detailed monitoring of each container's health, CPU, RAM, and specific services such as **MariaDB**, **PHP-FPM**, and web availability (**Healthcheck**).
 
-## 1. Instalación de Zabbix Agent 2 en el Servidor (Host)
+## 1. Installing Zabbix Agent 2 on the Server (Host)
 
-Primero, instala el repositorio de Zabbix 7.0 acorde a tu distribución (ej. Ubuntu/Debian):
+First, install the Zabbix 7.0 repository according to your distribution (e.g., Ubuntu/Debian):
 
 ```bash
-# Ejemplo para Ubuntu 24.04:
+# Example for Ubuntu 24.04:
 wget https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_7.0-2+ubuntu24.04_all.deb
 sudo dpkg -i zabbix-release_7.0-2+ubuntu24.04_all.deb
 sudo apt update
 ```
 
-Instala el agente y el plugin de Docker (el plugin viene incluido, pero en algunas distros es un paquete separado `zabbix-agent2-plugin-*`, revísalo según tu sistema. Generalmente basta con instalar el agente base):
+Install the agent and the Docker plugin (the plugin is included, but in some distros it is a separate package `zabbix-agent2-plugin-*`, review it according to your system. Generally, installing the base agent is sufficient):
 
 ```bash
 sudo apt install zabbix-agent2 zabbix-agent2-plugin-docker zabbix-agent2-plugin-mysql
 ```
 
-Añade el usuario `zabbix` al grupo `docker` para que el agente pueda leer las métricas de los contenedores a través del socket de Docker:
+Add the `zabbix` user to the `docker` group so that the agent can read container metrics through the Docker socket:
 
 ```bash
 sudo usermod -aG docker zabbix
 ```
 
-## 2. Configuración del Agente (`/etc/zabbix/zabbix_agent2.conf`)
+## 2. Agent Configuration (`/etc/zabbix/zabbix_agent2.conf`)
 
-Edita el fichero de configuración de Zabbix Agent 2 indicando la IP de tu servidor Zabbix y el hostname del servidor actual:
+Edit the Zabbix Agent 2 configuration file, specifying the IP of your Zabbix server and the hostname of the current server:
 
 ```ini
 Server=IP_ZABBIX_SERVER
 ServerActive=IP_ZABBIX_SERVER
-Hostname=NombreDeEsteServidorDocker
+Hostname=YourDockerServerHostName
 ```
 
-Reinicia y activa el servicio:
+Restart and enable the service:
 
 ```bash
 sudo systemctl restart zabbix-agent2
 sudo systemctl enable zabbix-agent2
 ```
 
-> **¡Importante!** Como has añadido el usuario `zabbix` al grupo `docker`, debes asegurarte de haber reiniciado el servicio `zabbix-agent2` *después* de añadir el grupo, de lo contrario no tendrá permisos para leer el socket.
+> **Important!** Since you added the `zabbix` user to the `docker` group, you must ensure you restart the `zabbix-agent2` service *after* adding the group, otherwise it will not have permissions to read the socket.
 
-## 3. Configuración en la interfaz de Zabbix 7
+## 3. Configuration in the Zabbix 7 Web Interface
 
-Ve a tu servidor Zabbix web y añade un nuevo Host:
+Go to your Zabbix web interface and add a new Host:
 
-1. **Host name**: Debe coincidir exactamente con el campo `Hostname` que configuraste en `zabbix_agent2.conf`.
-2. **Interfaces**: Añade una interfaz de tipo **Agent**, especificando la IP o DNS de tu servidor Docker.
-3. **Templates**: Aplica los siguientes templates:
-    - **Linux by Zabbix agent** (monitorización base del SO)
-    - **Docker by Zabbix agent 2** (descubrirá cada contenedor automáticamente midiendo CPU, RAM, Restart loops, etc.)
+1. **Host name**: Must match exactly the `Hostname` field configured in `zabbix_agent2.conf`.
+2. **Interfaces**: Add an interface of type **Agent**, specifying the IP or DNS of your Docker server.
+3. **Templates**: Apply the following templates:
+    - **Linux by Zabbix agent** (base OS monitoring)
+    - **Docker by Zabbix agent 2** (will automatically discover each container, measuring CPU, RAM, Restart loops, etc.)
 
-Guarda el Host. Pasados unos minutos, Zabbix descubrirá cada proyecto automáticamente gracias a Docker. 
+Save the Host. After a few minutes, Zabbix will automatically discover each project thanks to Docker.
 
-Verás contenedores como `[PROJECT_NAME]-app`, `[PROJECT_NAME]-db`, etc. de manera independiente en la sección de Discovery.
+You will see containers such as `[PROJECT_NAME]-app`, `[PROJECT_NAME]-db`, etc. independently in the Discovery section.
 
 ---
 
-## 4. Monitorización avanzada por stack (Opcional pero muy útil)
+## 4. Advanced Stack Monitoring (Optional but very useful)
 
-Dado que es una arquitectura multi-stack, Docker te da métricas genéricas, pero puedes extraer datos valiosos desde dentro:
+Since this is a multi-stack architecture, Docker gives you generic metrics, but you can extract valuable data from within:
 
-### A. Monitorizar Healthcheck de la app (Por cada proyecto)
-En el Host que has creado, dirígete a **Web Scenarios** o añade un **Item tipo HTTP Agent**.
-- **URL**: `https://dominio-del-stack.com/healthcheck.php` (si Traefik ya expone el servicio).
+### A. Monitor App Healthcheck (Per Project)
+In the Host you created, go to **Web Scenarios** or add an **Item of type HTTP Agent**.
+- **URL**: `https://your-stack-domain.com/healthcheck.php` (if Traefik already exposes the service).
 - **Required status codes**: `200`.
-- Esto te alertará si PHP, la base de datos o Apache fallan y el código del endpoint devuelve 500.
+- This will alert you if PHP, the database, or Apache fails and the endpoint code returns 500.
 
-### B. Monitorizar MariaDB (`[PROJECT_NAME]-db`)
+### B. Monitor MariaDB (`[PROJECT_NAME]-db`)
 
-El template `MySQL by Zabbix agent 2` requiere un usuario de base de datos en MariaDB. Como usas múltiples bases de datos por proyecto, puedes crear el usuario conectándote a cada contenedor:
+The `MySQL by Zabbix agent 2` template requires a database user in MariaDB. Since you use multiple databases per project, you can create the user by connecting to each container:
 
 ```bash
-docker exec -it [PROJECT_NAME]-db mysql -u root -p[TU_ROOT_PASS]
+docker exec -it [PROJECT_NAME]-db mysql -u root -p[YOUR_ROOT_PASS]
 ```
-Ejecuta:
+Execute:
 ```sql
 CREATE USER 'zbx_monitor'@'%' IDENTIFIED BY '<STRONG_PASSWORD>';
 GRANT PROCESS, SHOW DATABASES, SHOW VIEW, REPLICATION CLIENT ON *.* TO 'zbx_monitor'@'%';
 FLUSH PRIVILEGES;
 ```
 
-Para que Zabbix conecte desde el *host* hacia el contenedor, usa items Macro en tu Zabbix Server en la pestaña "Macros" del host creado:
-- `{$MYSQL.DSN}` = `tcp://localhost:33<PROJECT_ID>` (Por defecto cada stack hace bind de MariaDB usando el PROJECT_ID en `.env`, ej. `33999`).
+For Zabbix to connect from the host to the container, use Macro items on your Zabbix Server in the "Macros" tab of the created host:
+- `{$MYSQL.DSN}` = `tcp://localhost:33<PROJECT_ID>` (By default, each stack binds MariaDB using the `PROJECT_ID` in `.env`, e.g., `33999`).
 - `{$MYSQL.USER}` = `zbx_monitor`
 - `{$MYSQL.PASSWORD}` = `<STRONG_PASSWORD>`
 
-> **Nota:** Al haber varios contenedores de MariaDB en distintos puertos, Zabbix Agent 2 puede tener un perfil multi-base de datos pasándole la URI en la Key, o duplicando el Host en Zabbix asignándole el template de MySQL pero especificando los puertos correspondientes de cada cliente.
+> **Note:** Since there are multiple MariaDB containers on different ports, Zabbix Agent 2 can have a multi-database profile by passing the URI in the Key, or by duplicating the Host in Zabbix, assigning it the MySQL template but specifying the corresponding ports for each client.
 
-### C. FPM Metrics
-Para habilitar stats de FPM (requerirá un override en configuración):
-1. Asegúrate de tener `pm.status_path = /status` activo en el archivo `/usr/local/etc/php-fpm.d/zz-docker.conf` de tu contenedor.
-2. Aplica el Template `PHP-FPM by HTTP` u hostea el proxy en la interfaz Zabbix.
+### C. PHP-FPM Metrics
+To enable PHP-FPM status metrics (requires configuration override):
+1. Ensure you have `pm.status_path = /status` active in the `/usr/local/etc/php-fpm.d/zz-docker.conf` file of your container.
+2. Apply the `PHP-FPM by HTTP` template or host the proxy in the Zabbix interface.
 
-## Resumen de Beneficios
-1. Sólo mantienes un agente instalado en el servidor anfitrión.
-2. Te aprovechas del sistema *Low-Level Discovery (LLD)* de Zabbix 7.0 que creará Items de CPU, uso de Memoria y estado (Running/Restarting) de **forma automática** por cada nuevo inquilino/proyecto que despliegues en este servidor.
-3. Consumo mínimo de recursos en los contenedores (deja que el agente lea del host y no del contenedor).
+## Summary of Benefits
+1. You only maintain a single agent installed on the host server.
+2. You take advantage of the Zabbix 7.0 Low-Level Discovery (LLD) system, which will automatically create CPU, Memory usage, and state (Running/Restarting) items for each new tenant/project you deploy on this server.
+3. Minimal resource consumption inside the containers (let the agent read from the host rather than the container).

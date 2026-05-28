@@ -52,7 +52,7 @@ When switching to `APP_ENV=development`, you should also adjust the OPcache sett
 APP_ENV=development
 PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
 PHP_OPCACHE_REVALIDATE_FREQ=0
-PHP_EXTENSION_XDEBUG=1
+PHP_XDEBUG_MODE=debug
 ```
 
 This makes PHP recheck files on every request, so code changes are visible instantly. **Remember to revert these settings in production** (the `.env.dist` defaults are already optimized for production).
