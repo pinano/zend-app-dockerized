@@ -1,0 +1,83 @@
+<?php
+
+// Aux function for loading docker env variables
+if (!function_exists('getenv_docker')) {
+    function getenv_docker($env, $default)
+    {
+        $fileEnv = getenv($env . '_FILE');
+        if ($fileEnv && file_exists($fileEnv)) {
+            return rtrim(file_get_contents($fileEnv), "\r\n");
+        }
+        $val = getenv($env);
+        return ($val !== false) ? $val : $default;
+    }
+}
+
+// Env constants
+define('APPLICATION_ENV', getenv_docker('APP_ENV', 'production'));
+
+// Base routes
+define('ROOT_DIR', realpath(__DIR__ . '/..'));
+define('APPLICATION_PATH', ROOT_DIR . '/application');
+
+// Include path
+$paths = [
+
+    '/var/www/html/weblibs/Zend-1.12.17',
+    '/var/www/html/weblibs/fpdf16',
+    '/var/www/html/weblibs/PHPExcel-1.7.5/Classes',
+    '/var/www/html/weblibs/html2pdf-4.5.0',
+    get_include_path()
+];
+set_include_path(implode(PATH_SEPARATOR, $paths));
+
+// Credentials for application.ini
+$dbVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'];
+foreach ($dbVars as $var) {
+    define($var, getenv_docker($var, 'unknown'));
+}
+
+// Optional SMTP configurations for application.ini
+$smtpVars = ['SMTP_SERVER', 'SMTP_SSL', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS'];
+foreach ($smtpVars as $var) {
+    define($var, getenv_docker($var, ''));
+}
+
+// Detect if Redis profile is active
+$composeProfiles = getenv_docker('COMPOSE_PROFILES', '');
+$redisEnabled = (strpos($composeProfiles, 'redis') !== false);
+
+if ($redisEnabled) {
+    define('SESSION_SAVE_HANDLER', 'redis');
+    define('SESSION_SAVE_PATH', 'tcp://redis:6379');
+
+    define('METADATA_CACHE_BACKEND', 'Cm_Cache_Backend_Redis');
+    define('METADATA_CACHE_BACKEND_SERVER', 'redis');
+    define('METADATA_CACHE_BACKEND_PORT', 6379);
+
+    define('GENERAL_CACHE_BACKEND', 'Cm_Cache_Backend_Redis');
+    define('GENERAL_CACHE_BACKEND_SERVER', 'redis');
+    define('GENERAL_CACHE_BACKEND_PORT', 6379);
+} else {
+    define('SESSION_SAVE_HANDLER', 'files');
+    define('SESSION_SAVE_PATH', ROOT_DIR . '/tmp/sessions');
+
+    define('METADATA_CACHE_BACKEND', 'File');
+    define('METADATA_CACHE_BACKEND_SERVER', '');
+    define('METADATA_CACHE_BACKEND_PORT', '');
+
+    define('GENERAL_CACHE_BACKEND', 'File');
+    define('GENERAL_CACHE_BACKEND_SERVER', '');
+    define('GENERAL_CACHE_BACKEND_PORT', '');
+}
+
+/** Zend_Application */
+require_once 'Zend/Application.php';
+
+// App bootstrap
+$application = new Zend_Application(
+    APPLICATION_ENV,
+    APPLICATION_PATH . '/configs/application.ini'
+);
+
+$application->bootstrap()->run();

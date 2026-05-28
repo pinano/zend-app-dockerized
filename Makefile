@@ -219,6 +219,15 @@ $(MAKECMDGOALS):
 				printf "$(BOLD)make redis-ping$(RESET)\n" ; \
 				printf "  Ping the Redis container to verify it is responsive.\n" ; \
 				;; \
+			"setup-legacy-configs") \
+				printf "$(BOLD)make setup-legacy-configs$(RESET)\n" ; \
+				printf "  Generate/update Zend Framework legacy configuration files in docroot/.\n" ; \
+				printf "  This command will:\n" ; \
+				printf "    1. Create docroot/public/ and docroot/application/configs/ if they don't exist.\n" ; \
+				printf "    2. Scan docroot/weblibs/ for libraries and update index.php's include paths.\n" ; \
+				printf "    3. Copy application.ini.sample to docroot/application/configs/application.ini.\n" ; \
+				printf "    4. Create backup files (.bak) of existing configurations.\n" ; \
+				;; \
 			"help") \
 				printf "$(BOLD)make help$(RESET)\n" ; \
 				printf "  Show the general help menu listing all available targets.\n" ; \
@@ -238,6 +247,7 @@ help:
 	@printf "For detailed help on any command, run: make <target> help\n\n"
 	@printf "$(BOLD)General$(RESET)\n"
 	@printf "  $(CYAN)help$(RESET)          Show this help message\n"
+	@printf "  $(CYAN)setup-legacy-configs$(RESET) Generate/update public/index.php and application.ini in docroot/\n"
 	@printf "  $(CYAN)doctor$(RESET)        Run diagnostic checks (port conflicts, host transparent huge pages)\n"
 	@printf "  $(CYAN)status$(RESET)        Show stack status (docker compose ps)\n"
 	@printf "  $(CYAN)services$(RESET)      List available services\n"
@@ -287,6 +297,11 @@ help:
 		printf "  $(CYAN)redis-ping$(RESET)    Ping Redis server\n"; \
 	fi
 	@printf "\n"
+
+.PHONY: setup-legacy-configs
+setup-legacy-configs:
+	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required to run the configuration tool."; exit 1)
+	@python3 docker/scripts/setup-legacy-configs.py
 
 .PHONY: init
 init:

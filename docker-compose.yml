@@ -35,6 +35,7 @@ services:
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
       APP_ENV: ${APP_ENV:-development}
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
       LOG_OUTPUT_LEVEL: ${LOG_OUTPUT_LEVEL:-warn}
       # Apache
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
@@ -72,10 +73,16 @@ services:
       PHP_FPM_PM_MAX_REQUESTS: ${PHP_FPM_PM_MAX_REQUESTS:-500}
       PHP_FPM_SLOWLOG_TIMEOUT: ${PHP_FPM_SLOWLOG_TIMEOUT:-10s}
       # Database
-      DB_HOST: db
+      DB_HOST: ${DB_HOST:-db}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      # SMTP Mail
+      SMTP_SERVER: ${SMTP_SERVER:-}
+      SMTP_SSL: ${SMTP_SSL:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     healthcheck:
       test: [ "CMD-SHELL", "curl -sf --max-time 5 --connect-timeout 2 http://localhost:8080/healthcheck.php -o /dev/null || exit 1" ]
       interval: ${HEALTHCHECK_INTERVAL:-60s}
@@ -130,6 +137,7 @@ services:
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
       APP_ENV: ${APP_ENV:-development}
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
       LOG_OUTPUT_LEVEL: ${LOG_OUTPUT_LEVEL:-warn}
       IS_CRON: 1
       # PHP
@@ -144,14 +152,20 @@ services:
       PHP_OPCACHE_HUGE_CODE_PAGES: ${PHP_OPCACHE_HUGE_CODE_PAGES:-0}
       PHP_XDEBUG_MODE: ${PHP_XDEBUG_MODE:-off}
       # Database
-      DB_HOST: db
+      DB_HOST: ${DB_HOST:-db}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      # SMTP Mail
+      SMTP_SERVER: ${SMTP_SERVER:-}
+      SMTP_SSL: ${SMTP_SSL:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
     # 1. Dump Docker env vars to /etc/environment so cron jobs can access DB_HOST, DB_NAME, etc.
     #    (The vanilla cron daemon strips all inherited environment variables.)
     # 2. Fix permissions for cron.d files (must be owned by root and 644) before starting cron.
-    command: sh -c "printenv | grep -E '^(DB_HOST|DB_NAME|DB_USER|DB_PASS|APP_ENV|TZ|PHP_|USER_ID|GROUP_ID)=' > /etc/environment && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
+    command: sh -c "printenv | grep -E '^(DB_HOST|DB_NAME|DB_USER|DB_PASS|APP_ENV|TZ|PHP_|USER_ID|GROUP_ID|SMTP_|COMPOSE_PROFILES)=' > /etc/environment && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
     restart: unless-stopped
     networks:
       - backnet

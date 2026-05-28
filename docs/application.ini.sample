@@ -1,0 +1,183 @@
+; APPLICATION_PATH/configs/application.ini
+; Zend_Application configuration template
+
+; ==========================================================================================
+; P R O D U C T I O N
+; ==========================================================================================
+[production]
+
+; application variables --------------------------------------------------------------------
+app.zendFramework                                                       = "1.12.17dev"
+app.company                                                             = "Example Company"
+app.department                                                          = ""
+app.title                                                               = ""
+app.replyTo                                                             = "replyto@example.com"
+app.contactPhone                                                        = ""
+app.contactEmail                                                        = "info@example.com"
+app.logfile                                                             = APPLICATION_PATH "/logs/error.log"
+app.sysadmin.email                                                      = "sysadmin@example.com"
+app.noreply.email                                                       = "noreply@example.com"
+app.url                                                                 = "https://example.com"
+app.timeout                                                             = 7200
+
+; php settings -----------------------------------------------------------------------------
+phpSettings.display_startup_errors                                      = 0
+phpSettings.display_errors                                              = 0
+phpSettings.error_reporting                                             = 8191 ; E_ALL & ~E_NOTICE & ~E_DEPRECATED
+phpSettings.date.timezone                                               = "Europe/Madrid"
+phpSettings.soap.wsdl_cache_enabled                                     = 1
+
+; include paths ----------------------------------------------------------------------------
+includePaths.library                                                    = APPLICATION_PATH "/../library"
+includePaths.models                                                     = APPLICATION_PATH "/models"
+includePaths.forms                                                      = APPLICATION_PATH "/forms"
+
+; autoloader namespaces --------------------------------------------------------------------
+autoloaderNamespaces.custom                                             = "Custom_"
+
+; bootstrap --------------------------------------------------------------------------------
+bootstrap.path                                                          = APPLICATION_PATH "/Bootstrap.php"
+bootstrap.class                                                         = "Bootstrap"
+
+; plugin paths -----------------------------------------------------------------------------
+pluginPaths.Custom_Application_Resource                                 = "Custom/Application/Resource"
+
+; ------------------------------------------------------------------------------------------
+; resources
+; ------------------------------------------------------------------------------------------
+
+; frontController resource -----------------------------------------------------------------
+resources.frontController.throwErrors                                   = false
+resources.frontController.controllerDirectory.default                   = APPLICATION_PATH "/modules/default/controllers"
+resources.frontController.controllerDirectory.backnet                   = APPLICATION_PATH "/modules/backnet/controllers"
+resources.frontController.controllerDirectory.maintenance               = ""
+resources.frontController.params.prefixDefaultModule                    = false
+resources.frontController.env                                           = APPLICATION_ENV
+
+; layout resource --------------------------------------------------------------------------
+resources.layout.layout                                                 = "layout"
+resources.layout.layoutPath                                             = APPLICATION_PATH "/layouts"
+
+; view resource ----------------------------------------------------------------------------
+resources.view.encoding                                                 = "UTF-8"
+resources.view.doctype                                                  = "HTML5"
+
+; session resource -------------------------------------------------------------------------
+resources.session.use_only_cookies                                      = true
+resources.session.remember_me_seconds                                   = 864000
+phpSettings.session.save_handler                                        = SESSION_SAVE_HANDLER
+phpSettings.session.save_path                                           = SESSION_SAVE_PATH
+
+; multidb resource (MySQL) -----------------------------------------------------------------
+resources.multidb.mysql.adapter                                         = "PDO_MYSQL"
+resources.multidb.mysql.host                                            = DB_HOST
+resources.multidb.mysql.dbname                                          = DB_NAME
+resources.multidb.mysql.username                                        = DB_USER
+resources.multidb.mysql.password                                        = DB_PASS
+resources.multidb.mysql.driver_options.1002                             = "SET NAMES utf8"
+resources.multidb.mysql.isDefaultTableAdapter                           = true
+resources.multidb.mysql.profiler.enabled                                = false
+
+; cache resource (Dynamic Redis / File) ----------------------------------------------------
+resources.cache.metadata_cache.frontend.automatic_serialization         = true
+resources.cache.metadata_cache.frontend.lifetime                        = 7200
+resources.cache.metadata_cache.backend.name                             = METADATA_CACHE_BACKEND
+resources.cache.metadata_cache.backend.options.server                   = METADATA_CACHE_BACKEND_SERVER
+resources.cache.metadata_cache.backend.options.port                     = METADATA_CACHE_BACKEND_PORT
+resources.cache.metadata_cache.backend.options.cache_dir                = ROOT_DIR "/tmp/cache/zend_db_cache"
+
+; cache manager (Dynamic Redis / File) -----------------------------------------------------
+resources.cachemanager.general.frontend.name                            = Core
+resources.cachemanager.general.frontend.options.lifetime                = 7200
+resources.cachemanager.general.frontend.options.automatic_serialization = true
+resources.cachemanager.general.backend.name                             = GENERAL_CACHE_BACKEND
+resources.cachemanager.general.backend.options.server                   = GENERAL_CACHE_BACKEND_SERVER
+resources.cachemanager.general.backend.options.port                     = GENERAL_CACHE_BACKEND_PORT
+resources.cachemanager.general.backend.options.cache_dir                = ROOT_DIR "/tmp/cache"
+
+; logger resource --------------------------------------------------------------------------
+resources.logger.path                                                   = APPLICATION_PATH "/logs/common.log"
+resources.logger.writer                                                 = "simple" ; can be "simple", "xml" or "db"
+resources.logger.dbtable                                                = "logs" ; Database table name (for db writer)
+resources.logger.format                                                 = "%timestamp% %priorityName% (%priority%): %message%" PHP_EOL
+resources.logger.filter                                                 = Zend_Log::INFO ; Show Info level and above
+resources.logger.timezone                                               = "Europe/Madrid"
+
+; email resource ---------------------------------------------------------------------------
+resources.email.transport                                               = "smtp"
+resources.email.smtp.server                                             = SMTP_SERVER
+resources.email.smtp.params.ssl                                         = SMTP_SSL
+resources.email.smtp.params.port                                        = SMTP_PORT
+resources.email.smtp.params.auth                                        = "login"
+resources.email.smtp.params.username                                    = SMTP_USER
+resources.email.smtp.params.password                                    = SMTP_PASS
+
+; images resource --------------------------------------------------------------------------
+resources.images.conf.path                                              = "uploaded_files/photos"
+resources.images.conf.watermark                                         = "images/marcadeagua_30.png"
+resources.images.sizes.thumbnail.maxwidth                               = 160
+resources.images.sizes.thumbnail.maxheight                              = 101
+resources.images.sizes.thumbnail.crop                                   = true
+resources.images.sizes.thumbnail.watermarked                            = false
+resources.images.sizes.slide.maxwidth                                   = 1000
+resources.images.sizes.slide.maxheight                                  = 700
+resources.images.sizes.slide.crop                                       = true
+resources.images.sizes.slide.watermarked                                = false
+
+; google maps ------------------------------------------------------------------------------
+google.maps.default.width                                               = 480
+google.maps.default.height                                              = 300
+google.maps.default.lat                                                 = 40.423394
+google.maps.default.lng                                                 = -3.707885
+google.maps.default.zoom                                                = 5
+
+; picasa configuration ---------------------------------------------------------------------
+picasa.enabled                                                          = 0
+
+; flickr configuration ---------------------------------------------------------------------
+flickr.enabled                                                          = 0
+
+; languages --------------------------------------------------------------------------------
+languages.es.default                                                    = true
+languages.es.locale                                                     = "es_ES"
+languages.es.name                                                       = "español"
+
+; file uploads -----------------------------------------------------------------------------
+upload.maxFileSize                                                      = "4MB"
+upload.path                                                             = ROOT_DIR "/public/uploaded_files"
+public.path                                                             = ROOT_DIR "/public"
+
+; redirection strategies per role ---------------------------------------------------------
+auth.redirect.superadmin.module                                         = "backnet"
+auth.redirect.superadmin.controller                                     = "index"
+auth.redirect.superadmin.action                                         = "index"
+auth.redirect.admin.module                                              = "backnet"
+auth.redirect.admin.controller                                          = "index"
+auth.redirect.admin.action                                              = "index"
+auth.redirect.backnet.module                                            = "backnet"
+auth.redirect.backnet.controller                                        = "index"
+auth.redirect.backnet.action                                            = "index"
+auth.redirect.web.module                                                = "default"
+auth.redirect.web.controller                                            = "index"
+auth.redirect.web.action                                                = "index"
+
+; ==========================================================================================
+; S T A G I N G
+; ==========================================================================================
+[staging : production]
+
+; ==========================================================================================
+; T E S T I N G
+; ==========================================================================================
+[testing : production]
+phpSettings.display_startup_errors                                      = 1
+phpSettings.display_errors                                              = 1
+
+; ==========================================================================================
+; D E V E L O P M E N T
+; ==========================================================================================
+[development : production]
+phpSettings.display_startup_errors                                      = 1
+phpSettings.display_errors                                              = 1
+resources.frontController.throwErrors                                   = true
+resources.multidb.mysql.profiler.enabled                                = true
