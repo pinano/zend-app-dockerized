@@ -1,3 +1,14 @@
+## v2026.05.28.1 (2026-05-28)
+
+- docs: add make init environment initialization step to quickstart guide (1767071)
+- docs: add quickstart guide for macOS, Linux, and Windows setup (1922032)
+- refactor: replace setup-configs with setup-index to focus exclusively on public/index.php generation and remove obsolete application.ini.sample. (9d1d634)
+- refactor: replace legacy configuration setup with streamlined index.php automation script (acdf767)
+- refactor: rename setup-legacy-configs make target to setup-configs for clarity (c32a5ce)
+- refactor: rename setup-legacy-configs make target to setup-configs (1b6b335)
+- refactor: rename setup-legacy-configs to setup-configs in Makefile documentation (abbf3a5)
+- feat: add automated setup tools and environment-aware configuration templates for legacy Zend Framework applications (a40b322)
+
 ## v2026.05.28 (2026-05-28)
 
 - docs: translate documentation to English, add license file and repository badge (a25836f)
