@@ -1,3 +1,8 @@
+## v2026.05.28 (2026-05-28)
+
+- docs: translate documentation to English, add license file and repository badge (a25836f)
+- feat: add comprehensive Makefile help system with dynamic port discovery and configuration management utilities (8a01fc3)
+
 ## v2026.05.27.2 (2026-05-27)
 
 - refactor: enhance Makefile help menu with color coding, categorization, and comprehensive command listing (79de12c)
