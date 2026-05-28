@@ -247,7 +247,7 @@ help:
 	@printf "For detailed help on any command, run: make <target> help\n\n"
 	@printf "$(BOLD)General$(RESET)\n"
 	@printf "  $(CYAN)help$(RESET)          Show this help message\n"
-	@printf "  $(CYAN)setup-legacy-configs$(RESET) Generate/update public/index.php and application.ini in docroot/\n"
+	@printf "  $(CYAN)setup-configs$(RESET) Generate/update public/index.php and application.ini in docroot/\n"
 	@printf "  $(CYAN)doctor$(RESET)        Run diagnostic checks (port conflicts, host transparent huge pages)\n"
 	@printf "  $(CYAN)status$(RESET)        Show stack status (docker compose ps)\n"
 	@printf "  $(CYAN)services$(RESET)      List available services\n"
