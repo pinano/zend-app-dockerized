@@ -40,6 +40,7 @@ if [ -f "$ENV_PATH" ]; then
     case "$key" in
       *' '*|*'	'*|'') continue ;;
     esac
+    val=$(echo -n "$val" | tr -d '\r')
     export "$key=$val"
   done < "$ENV_PATH"
 fi

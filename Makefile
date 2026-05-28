@@ -6,6 +6,232 @@ BOLD  := \033[1m
 CYAN  := \033[36m
 RESET := \033[0m
 
+# Dynamic port discovery from .env
+PROJECT_ID_RAW := $(shell grep '^PROJECT_ID=' .env 2>/dev/null | cut -d= -f2 | tr -d '"'\''\r ')
+PROJECT_ID     := $(if $(PROJECT_ID_RAW),$(PROJECT_ID_RAW),999)
+DB_PORT        := 33$(PROJECT_ID)
+SFTP_PORT      := 22$(PROJECT_ID)
+
+# Detect if 'help' is one of the goals, and there is at least one other goal.
+# E.g., 'make start help' or 'make help start'.
+SHOW_HELP :=
+ifneq ($(filter help,$(MAKECMDGOALS)),)
+  ifneq ($(filter-out help,$(MAKECMDGOALS)),)
+    SHOW_HELP := 1
+  endif
+endif
+
+ifeq ($(SHOW_HELP),1)
+
+FIRST_GOAL := $(firstword $(filter-out help,$(MAKECMDGOALS)))
+
+.PHONY: $(MAKECMDGOALS)
+$(MAKECMDGOALS):
+	@if [ "$@" = "$(FIRST_GOAL)" ]; then \
+		case "$@" in \
+			"doctor") \
+				printf "$(BOLD)make doctor$(RESET)\n" ; \
+				printf "  Run diagnostic checks on the Docker environment and port configurations.\n" ; \
+				printf "  Checks include:\n" ; \
+				printf "    - Docker daemon accessibility.\n" ; \
+				printf "    - Host Transparent Huge Pages (THP) status (relevant for OPcache).\n" ; \
+				printf "    - Detailed check on database (33<PROJECT_ID>) and SFTP (22<PROJECT_ID>) ports.\n" ; \
+				printf "    - Alert if ports are bound to 0.0.0.0 or 127.0.0.1 and if they are blocked.\n" ; \
+				;; \
+			"status") \
+				printf "$(BOLD)make status$(RESET)\n" ; \
+				printf "  Show the status of all containers in the stack.\n" ; \
+				printf "  Equivalent to running 'docker compose ps'.\n" ; \
+				;; \
+			"services") \
+				printf "$(BOLD)make services$(RESET)\n" ; \
+				printf "  List all services defined in the docker-compose configuration.\n" ; \
+				printf "  Use these names for target-specific commands like 'make shell <service>'.\n" ; \
+				;; \
+			"config") \
+				printf "$(BOLD)make config$(RESET)\n" ; \
+				printf "  Validate and render the active Docker Compose configuration.\n" ; \
+				printf "  Displays the parsed docker-compose file with environment variables expanded.\n" ; \
+				;; \
+			"start") \
+				printf "$(BOLD)make start$(RESET)\n" ; \
+				printf "  Start the Docker stack in the background.\n" ; \
+				printf "  Before starting, it will automatically:\n" ; \
+				printf "    1. Initialize the .env file from .env.dist if missing.\n" ; \
+				printf "    2. Sync missing .env keys from .env.dist.\n" ; \
+				printf "    3. Run configuration validation to check for security/performance issues.\n" ; \
+				printf "    4. Clear old application temp volume mounts.\n" ; \
+				;; \
+			"stop") \
+				printf "$(BOLD)make stop$(RESET)\n" ; \
+				printf "  Stop all running containers in the stack.\n" ; \
+				printf "  Clears networks and orphaned containers. Safe: does NOT delete database volumes.\n" ; \
+				;; \
+			"restart") \
+				printf "$(BOLD)make restart$(RESET)\n" ; \
+				printf "  Perform a clean restart of the stack.\n" ; \
+				printf "  Executes 'make stop' followed by 'make start'. Recommended to apply .env changes.\n" ; \
+				;; \
+			"rebuild") \
+				printf "$(BOLD)make rebuild [service]$(RESET)\n" ; \
+				printf "  Rebuild Docker images for the stack.\n" ; \
+				printf "  Provide an optional service name to rebuild only that service (e.g. 'make rebuild app').\n" ; \
+				;; \
+			"pull") \
+				printf "$(BOLD)make pull$(RESET)\n" ; \
+				printf "  Pull latest versions of the base Docker images specified in the compose file.\n" ; \
+				;; \
+			"clean") \
+				printf "$(BOLD)make clean$(RESET)\n" ; \
+				printf "  Tear down everything, including persistent volumes.\n" ; \
+				printf "  $(BOLD)$(CYAN)WARNING:$(RESET) This deletes all database volumes and data permanently!\n" ; \
+				printf "  Requires explicit user confirmation [y/N] before proceeding.\n" ; \
+				;; \
+			"shell") \
+				printf "$(BOLD)make shell [service]$(RESET)\n" ; \
+				printf "  Open an interactive terminal/shell inside a running container.\n" ; \
+				printf "  Defaults to the 'app' container. Usage: 'make shell [service]' (e.g., 'make shell db').\n" ; \
+				;; \
+			"logs") \
+				printf "$(BOLD)make logs [service]$(RESET)\n" ; \
+				printf "  Stream real-time log output for all containers or a specific service.\n" ; \
+				printf "  Usage: 'make logs' or 'make logs [service]' (e.g., 'make logs app').\n" ; \
+				;; \
+			"logs-apache") \
+				printf "$(BOLD)make logs-apache$(RESET)\n" ; \
+				printf "  Follow Apache access and error logs from the 'app' container.\n" ; \
+				;; \
+			"logs-php") \
+				printf "$(BOLD)make logs-php$(RESET)\n" ; \
+				printf "  Follow the PHP-FPM error log file directly (useful to trace PHP errors/exceptions).\n" ; \
+				;; \
+			"logs-zend") \
+				printf "$(BOLD)make logs-zend$(RESET)\n" ; \
+				printf "  Follow the Zend Framework application log file directly.\n" ; \
+				;; \
+			"logs-slow") \
+				printf "$(BOLD)make logs-slow$(RESET)\n" ; \
+				printf "  Follow the PHP-FPM slow log to identify slow scripts exceeding the execution threshold.\n" ; \
+				;; \
+			"db") \
+				printf "$(BOLD)make db [action] [file]$(RESET)\n" ; \
+				printf "  Run database management tools.\n" ; \
+				printf "  Actions:\n" ; \
+				printf "    - (No action): Open an interactive MariaDB console in the 'db' container.\n" ; \
+				printf "    - db import <file.sql>: Import a SQL dump file into the database.\n" ; \
+				printf "    - db export: Export a timestamped, single-transaction SQL dump to the host.\n" ; \
+				;; \
+			"db-root") \
+				printf "$(BOLD)make db-root$(RESET)\n" ; \
+				printf "  Connect to the database console as the 'root' database user.\n" ; \
+				;; \
+			"opcache-clear") \
+				printf "$(BOLD)make opcache-clear$(RESET)\n" ; \
+				printf "  Clear PHP OPcache bytecode cache for the PHP-FPM pool (zero-downtime flush).\n" ; \
+				;; \
+			"php-info") \
+				printf "$(BOLD)make php-info$(RESET)\n" ; \
+				printf "  Display current PHP configuration settings active in the running container.\n" ; \
+				;; \
+			"ctop") \
+				printf "$(BOLD)make ctop$(RESET)\n" ; \
+				printf "  Monitor project containers in real-time using ctop (CPU, MEM, NET statistics).\n" ; \
+				;; \
+			"open-ports") \
+				printf "$(BOLD)make open-ports$(RESET)\n" ; \
+				printf "  Configure .env to bind DB ($(DB_PORT)) and SFTP ($(SFTP_PORT)) ports to 0.0.0.0 (accessible externally).\n" ; \
+				printf "  $(BOLD)$(CYAN)WARNING:$(RESET) Exposing database ($(DB_PORT)) and SFTP ($(SFTP_PORT)) ports externally is a security risk. Secure your host with a firewall!\n" ; \
+				printf "  Note: Run 'make start' to apply configuration.\n" ; \
+				;; \
+			"close-ports") \
+				printf "$(BOLD)make close-ports$(RESET)\n" ; \
+				printf "  Configure .env to restrict DB ($(DB_PORT)) and SFTP ($(SFTP_PORT)) ports to 127.0.0.1 (localhost only).\n" ; \
+				printf "  Note: Run 'make start' to apply configuration.\n" ; \
+				;; \
+			"open-db") \
+				printf "$(BOLD)make open-db$(RESET)\n" ; \
+				printf "  Configure .env to bind the DB port ($(DB_PORT)) to 0.0.0.0 (accessible externally).\n" ; \
+				printf "  $(BOLD)$(CYAN)WARNING:$(RESET) Exposing the database port ($(DB_PORT)) externally is a security risk. Secure your host with a firewall!\n" ; \
+				printf "  Note: Run 'make start' to apply configuration.\n" ; \
+				;; \
+			"close-db") \
+				printf "$(BOLD)make close-db$(RESET)\n" ; \
+				printf "  Configure .env to restrict the DB port ($(DB_PORT)) to 127.0.0.1 (localhost only).\n" ; \
+				printf "  Note: Run 'make start' to apply configuration.\n" ; \
+				;; \
+			"open-sftp") \
+				printf "$(BOLD)make open-sftp$(RESET)\n" ; \
+				printf "  Configure .env to bind the SFTP port ($(SFTP_PORT)) to 0.0.0.0 (accessible externally).\n" ; \
+				printf "  $(BOLD)$(CYAN)WARNING:$(RESET) Exposing the SFTP port ($(SFTP_PORT)) externally is a security risk. Secure your host with a firewall!\n" ; \
+				;; \
+			"close-sftp") \
+				printf "$(BOLD)make close-sftp$(RESET)\n" ; \
+				printf "  Configure .env to restrict the SFTP port ($(SFTP_PORT)) to 127.0.0.1 (localhost only).\n" ; \
+				printf "  Note: Run 'make start' to apply configuration.\n" ; \
+				;; \
+			"size-small") \
+				printf "$(BOLD)make size-small$(RESET)\n" ; \
+				printf "  Apply SMALL sizing profile to .env (< 500 visits/day).\n" ; \
+				printf "  Restricts resource limits. Perfect for local dev and low-memory servers.\n" ; \
+				printf "  Note: Run 'make restart' to apply changes.\n" ; \
+				;; \
+			"size-medium") \
+				printf "$(BOLD)make size-medium$(RESET)\n" ; \
+				printf "  Apply MEDIUM sizing profile to .env (500 - 5000 visits/day).\n" ; \
+				printf "  Balanced resource allocation for moderate production environments.\n" ; \
+				printf "  Note: Run 'make restart' to apply changes.\n" ; \
+				;; \
+			"size-large") \
+				printf "$(BOLD)make size-large$(RESET)\n" ; \
+				printf "  Apply LARGE sizing profile to .env (> 5000 visits/day).\n" ; \
+				printf "  High-performance configuration. Allocates more RAM and enables OPcache Huge Code Pages.\n" ; \
+				printf "  Note: Run 'make restart' to apply changes.\n" ; \
+				;; \
+			"size-show") \
+				printf "$(BOLD)make size-show$(RESET)\n" ; \
+				printf "  Show current sizing configuration parameters and identify active profile.\n" ; \
+				;; \
+			"crontab-init") \
+				printf "$(BOLD)make crontab-init$(RESET)\n" ; \
+				printf "  Create an example crontab file under 'docker/scripts/crontab' if it does not exist.\n" ; \
+				;; \
+			"release") \
+				printf "$(BOLD)make release$(RESET)\n" ; \
+				printf "  Generate a new CalVer release, update CHANGELOG.md, and create/push a git tag.\n" ; \
+				;; \
+			"update") \
+				printf "$(BOLD)make update [version=vX]$(RESET)\n" ; \
+				printf "  Fetch changes and safely upgrade the codebase to a specific version or latest.\n" ; \
+				;; \
+			"rollback") \
+				printf "$(BOLD)make rollback$(RESET)\n" ; \
+				printf "  Interactively list recent git tags and roll back codebase to the selected version.\n" ; \
+				;; \
+			"redis-info") \
+				printf "$(BOLD)make redis-info$(RESET)\n" ; \
+				printf "  Retrieve and display statistics from the Valkey/Redis caching server.\n" ; \
+				;; \
+			"redis-monitor") \
+				printf "$(BOLD)make redis-monitor$(RESET)\n" ; \
+				printf "  Stream incoming Redis commands in real-time (useful for debugging cache keys).\n" ; \
+				;; \
+			"redis-ping") \
+				printf "$(BOLD)make redis-ping$(RESET)\n" ; \
+				printf "  Ping the Redis container to verify it is responsive.\n" ; \
+				;; \
+			"help") \
+				printf "$(BOLD)make help$(RESET)\n" ; \
+				printf "  Show the general help menu listing all available targets.\n" ; \
+				;; \
+			*) \
+				printf "Unknown target: $@\n" ; \
+				printf "For a list of all targets, run: make help\n" ; \
+				;; \
+		esac; \
+	fi
+
+else
+
 .PHONY: help
 help:
 	@printf "$(BOLD)Usage:$(RESET) make [target] [service]\n"
@@ -37,12 +263,12 @@ help:
 	@printf "  $(CYAN)php-info$(RESET)      Show active PHP configuration in the container\n"
 	@printf "  $(CYAN)ctop$(RESET)          Monitor containers using ctop\n\n"
 	@printf "$(BOLD)Port Management$(RESET)\n"
-	@printf "  $(CYAN)open-ports$(RESET)    Open DB & SFTP ports to the outside world (0.0.0.0)\n"
-	@printf "  $(CYAN)close-ports$(RESET)   Close DB & SFTP ports (restrict to 127.0.0.1)\n"
-	@printf "  $(CYAN)open-db$(RESET)       Open only DB port\n"
-	@printf "  $(CYAN)close-db$(RESET)      Close only DB port\n"
-	@printf "  $(CYAN)open-sftp$(RESET)     Open only SFTP port\n"
-	@printf "  $(CYAN)close-sftp$(RESET)    Close only SFTP port\n\n"
+	@printf "  $(CYAN)open-ports$(RESET)    Open DB ($(DB_PORT)) & SFTP ($(SFTP_PORT)) ports to the outside world (0.0.0.0)\n"
+	@printf "  $(CYAN)close-ports$(RESET)   Close DB ($(DB_PORT)) & SFTP ($(SFTP_PORT)) ports (restrict to 127.0.0.1)\n"
+	@printf "  $(CYAN)open-db$(RESET)       Open only DB port ($(DB_PORT))\n"
+	@printf "  $(CYAN)close-db$(RESET)      Close only DB port ($(DB_PORT))\n"
+	@printf "  $(CYAN)open-sftp$(RESET)     Open only SFTP port ($(SFTP_PORT))\n"
+	@printf "  $(CYAN)close-sftp$(RESET)    Close only SFTP port ($(SFTP_PORT))\n\n"
 	@printf "$(BOLD)Sizing Profiles$(RESET)\n"
 	@printf "  $(CYAN)size-small$(RESET)    Configure .env for low-traffic app (< 500 visits/day)\n"
 	@printf "  $(CYAN)size-medium$(RESET)   Configure .env for medium-traffic app (500-5000 visits/day)\n"
@@ -265,8 +491,8 @@ db: _ensure_env
 		fi; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
-		PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1); \
-		PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1); \
+		PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
+		PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
@@ -292,7 +518,7 @@ db-root: _ensure_env
 
 .PHONY: ctop
 ctop:
-	@PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1); \
+	@PROJECT_NAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	docker run --rm -ti \
 		--platform linux/amd64 \
 		--name=ctop \
@@ -329,7 +555,7 @@ doctor: _ensure_env
 	else \
 		echo "ℹ️  Host Transparent Huge Pages: Not supported by OS kernel"; \
 	fi
-	@PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1); \
+	@PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	DB_PORT="33$$PROJECT_ID"; \
 	SFTP_PORT="22$$PROJECT_ID"; \
 	DB_BIND=$$(grep '^DB_BIND_IP=' .env | cut -d= -f2 | head -1); \
@@ -585,9 +811,9 @@ size-large: _ensure_env
 
 .PHONY: size-show
 size-show: _ensure_env
-	@APP_MEM=$$(grep '^APP_MEMORY=' .env | cut -d= -f2); \
-	DB_MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2); \
-	FPM_CHILDREN=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2); \
+	@APP_MEM=$$(grep '^APP_MEMORY=' .env | cut -d= -f2 | tr -d '"'\''\r '); \
+	DB_MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2 | tr -d '"'\''\r '); \
+	FPM_CHILDREN=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2 | tr -d '"'\''\r '); \
 	PROFILE="⚠️  CUSTOM (modified)"; \
 	if [ "$$APP_MEM" = "256M" ] && [ "$$DB_MEM" = "512M" ] && [ "$$FPM_CHILDREN" = "10" ]; then \
 		PROFILE="🟢 SMALL (Low traffic)"; \
@@ -620,3 +846,5 @@ crontab-init:
 # Catch-all target for positional arguments
 %:
 	@:
+
+endif
