@@ -219,8 +219,8 @@ $(MAKECMDGOALS):
 				printf "$(BOLD)make redis-ping$(RESET)\n" ; \
 				printf "  Ping the Redis container to verify it is responsive.\n" ; \
 				;; \
-			"setup-legacy-configs") \
-				printf "$(BOLD)make setup-legacy-configs$(RESET)\n" ; \
+			"setup-configs") \
+				printf "$(BOLD)make setup-configs$(RESET)\n" ; \
 				printf "  Generate/update Zend Framework legacy configuration files in docroot/.\n" ; \
 				printf "  This command will:\n" ; \
 				printf "    1. Create docroot/public/ and docroot/application/configs/ if they don't exist.\n" ; \
