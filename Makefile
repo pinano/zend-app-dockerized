@@ -219,14 +219,13 @@ $(MAKECMDGOALS):
 				printf "$(BOLD)make redis-ping$(RESET)\n" ; \
 				printf "  Ping the Redis container to verify it is responsive.\n" ; \
 				;; \
-			"setup-configs") \
-				printf "$(BOLD)make setup-configs$(RESET)\n" ; \
-				printf "  Generate/update Zend Framework legacy configuration files in docroot/.\n" ; \
+			"setup-index") \
+				printf "$(BOLD)make setup-index$(RESET)\n" ; \
+				printf "  Generate/update Zend Framework legacy public/index.php in docroot/.\n" ; \
 				printf "  This command will:\n" ; \
-				printf "    1. Create docroot/public/ and docroot/application/configs/ if they don't exist.\n" ; \
+				printf "    1. Create docroot/public/ if it doesn't exist.\n" ; \
 				printf "    2. Scan docroot/weblibs/ for libraries and update index.php's include paths.\n" ; \
-				printf "    3. Copy application.ini.sample to docroot/application/configs/application.ini.\n" ; \
-				printf "    4. Create backup files (.bak) of existing configurations.\n" ; \
+				printf "    3. Create backup file (.bak) of existing index.php configuration.\n" ; \
 				;; \
 			"help") \
 				printf "$(BOLD)make help$(RESET)\n" ; \
@@ -247,7 +246,7 @@ help:
 	@printf "For detailed help on any command, run: make <target> help\n\n"
 	@printf "$(BOLD)General$(RESET)\n"
 	@printf "  $(CYAN)help$(RESET)          Show this help message\n"
-	@printf "  $(CYAN)setup-configs$(RESET) Generate/update public/index.php and application.ini in docroot/\n"
+	@printf "  $(CYAN)setup-index$(RESET)   Generate/update public/index.php in docroot/public/\n"
 	@printf "  $(CYAN)doctor$(RESET)        Run diagnostic checks (port conflicts, host transparent huge pages)\n"
 	@printf "  $(CYAN)status$(RESET)        Show stack status (docker compose ps)\n"
 	@printf "  $(CYAN)services$(RESET)      List available services\n"
@@ -298,10 +297,10 @@ help:
 	fi
 	@printf "\n"
 
-.PHONY: setup-configs
-setup-configs:
+.PHONY: setup-index
+setup-index:
 	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required to run the configuration tool."; exit 1)
-	@python3 docker/scripts/setup-legacy-configs.py
+	@python3 docker/scripts/setup-index.py
 
 .PHONY: init
 init:

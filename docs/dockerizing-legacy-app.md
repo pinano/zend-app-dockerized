@@ -15,8 +15,6 @@ To dockerize your application, place the codebase inside the `docroot/` folder. 
 ├── docroot/                  # 👈 Copy your application code here (ignored by Git)
 │   ├── application/
 │   │   ├── Bootstrap.php
-│   │   ├── configs/
-│   │   │   └── application.ini
 │   │   ├── controllers/
 │   │   └── ...
 │   ├── public/
@@ -56,64 +54,16 @@ Many legacy projects require shared external libraries (such as old versions of 
 
 ---
 
-## 4. Automation: Setup Configurations in One Command
+## 4. Automation: Setup Entrypoint in One Command
 
-You can automatically generate/update the modern entrypoint and configuration structure using the following command:
+You can automatically generate/update the modern entrypoint structure using the following command:
 
 ```bash
-make setup-configs
+make setup-index
 ```
 
 ### What does this command do?
-1. Creates the directories `docroot/public` and `docroot/application/configs` if they do not exist.
+1. Creates the directory `docroot/public` if it does not exist.
 2. Scans `docroot/weblibs/` for directories and maps them to `/var/www/html/weblibs/` container paths. If a library contains a `Classes` subdirectory (e.g. `PHPExcel-1.7.5/Classes`), it automatically resolves to it.
 3. Automatically generates the `docroot/public/index.php` file using [index.php.sample](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/index.php.sample), injecting the detected include paths into the `$paths` array.
-4. Copies the clean and formatted [application.ini.sample](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/application.ini.sample) template to `docroot/application/configs/application.ini`.
-5. **Backup protection:** If a file already exists, it automatically creates a `.bak` backup copy of the existing configuration before applying updates.
-
----
-
-## 5. Security & Configurations via Environment Variables
-
-To prevent committing database credentials or API secrets (e.g., to GitHub), the generated `index.php` and `application.ini` files load credentials dynamically from Docker's environment variables.
-
-### How to use variables in configuration:
-1. Define the parameters in your local `.env` file (e.g., `DB_HOST=db`, `SMTP_SERVER=mail.example.com`).
-2. The `index.php` loads them using `getenv_docker()` and defines global PHP constants:
-   ```php
-   define('DB_HOST', getenv_docker('DB_HOST', 'unknown'));
-   define('SMTP_SERVER', getenv_docker('SMTP_SERVER', ''));
-   ```
-3. The `application.ini` references these constants directly (without quotes):
-   ```ini
-   resources.multidb.mysql.host = DB_HOST
-   resources.email.smtp.server  = SMTP_SERVER
-   ```
-
-### Recommended `.env` configurations:
-Ensure these variables are set in your `.env` file to fully configure your app:
-- Database connectivity: `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`
-- SMTP Server: `SMTP_SERVER`, `SMTP_SSL` (e.g. `tls`), `SMTP_PORT` (e.g. `587`), `SMTP_USER`, `SMTP_PASS`
-
----
-
-## 6. Environment Inheritance in `application.ini`
-
-The generated `application.ini` is structured to support standard Zend environment inheritance based on the Docker `APP_ENV` variable (`production` or `development`):
-
-- **`[production]`**: Heavy caching enabled, PHP startup errors / display errors turned off to prevent leaks.
-- **`[development : production]`**: Development settings that override production parameters:
-  - Enables PHP startup errors and display errors.
-  - Sets `resources.frontController.throwErrors = true` so exceptions bubble up instead of being swallowed.
-
----
-
-## 7. Redis / Valkey Caching By Default
-
-The generated `application.ini` comes pre-configured to use **Redis** (powered by Valkey in the stack) for caching out of the box:
-
-- **Metadata Cache**: Database schema metadata (`resources.cache.metadata_cache`) is cached in Redis instead of SQLite files to improve I/O speed.
-- **Application Cache Manager**: A general `general` cache resource is configured with the `Cm_Cache_Backend_Redis` backend.
-
-To use these caches, ensure you have enabled the `redis` compose profile in your `.env` file (`COMPOSE_PROFILES=redis`) and restarted the stack.
-
+4. **Backup protection:** If `index.php` already exists, it automatically creates a `.bak` backup copy of the existing file before applying updates.

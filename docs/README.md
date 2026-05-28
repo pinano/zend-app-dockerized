@@ -10,7 +10,7 @@ Below is an index organized by theme to facilitate navigation:
 
 Key guides to prepare and deploy your application inside the container environment:
 
-* **[Dockerization Guide](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/dockerizing-legacy-app.md)**: Step-by-step manual to migrate a legacy Zend application to the `docroot/` directory structure, configure the `index.php` entrypoint, and initialize dynamic parameters. It also explains why `.htaccess` files are not required.
+* **[Dockerization Guide](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/dockerizing-legacy-app.md)**: Step-by-step manual to migrate a legacy Zend application to the `docroot/` directory structure, configure the `index.php` entrypoint, and scan/inject shared libraries (`weblibs`). It also explains why `.htaccess` files are not required.
 * **[Application Environments (APP_ENV)](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/app_env.md)**: Explanation of how the `APP_ENV` variable (`production` or `development`) interacts with the web server (PHP-FPM/Apache) and how to securely synchronize it with the framework constant.
 
 ---

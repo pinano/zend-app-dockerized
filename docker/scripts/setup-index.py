@@ -5,8 +5,8 @@ import shutil
 import re
 
 def main():
-    print("🚀 Zend Legacy Configuration Tool")
-    print("─────────────────────────────────")
+    print("🚀 Zend Legacy Entrypoint Tool")
+    print("──────────────────────────────")
 
     # Paths definitions
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -15,13 +15,8 @@ def main():
     weblibs_dir = os.path.join(docroot_dir, 'weblibs')
     
     index_sample = os.path.join(docs_dir, 'index.php.sample')
-    ini_sample = os.path.join(docs_dir, 'application.ini.sample')
-    
     target_public = os.path.join(docroot_dir, 'public')
-    target_configs = os.path.join(docroot_dir, 'application', 'configs')
-    
     target_index = os.path.join(target_public, 'index.php')
-    target_ini = os.path.join(target_configs, 'application.ini')
 
     # Ensure docroot directory exists
     if not os.path.exists(docroot_dir):
@@ -92,23 +87,8 @@ def main():
     with open(target_index, 'w') as f:
         f.write(new_index_content)
     print(f"  🎉 Created/Updated: {target_index}")
-
-    # 3. GENERATE APPLICATION.INI
-    if not os.path.exists(ini_sample):
-        print(f"❌ ERROR: Sample application.ini not found at {ini_sample}", file=sys.stderr)
-        sys.exit(1)
-
-    print("📄 Processing application.ini...")
-    os.makedirs(target_configs, exist_ok=True)
-    if os.path.exists(target_ini):
-        backup_path = target_ini + '.bak'
-        print(f"  ⚠️ File already exists. Backing up existing application.ini to {os.path.basename(backup_path)}")
-        shutil.copy2(target_ini, backup_path)
-
-    shutil.copy2(ini_sample, target_ini)
-    print(f"  🎉 Created/Updated: {target_ini}")
-    print("─────────────────────────────────")
-    print("✅ Setup complete! Configurations initialized in docroot/.")
+    print("──────────────────────────────")
+    print("✅ Setup complete! index.php initialized in docroot/public/.")
 
 if __name__ == '__main__':
     main()
