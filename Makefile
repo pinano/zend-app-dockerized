@@ -298,8 +298,8 @@ help:
 	fi
 	@printf "\n"
 
-.PHONY: setup-legacy-configs
-setup-legacy-configs:
+.PHONY: setup-configs
+setup-configs:
 	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required to run the configuration tool."; exit 1)
 	@python3 docker/scripts/setup-legacy-configs.py
 

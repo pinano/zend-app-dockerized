@@ -61,7 +61,7 @@ Many legacy projects require shared external libraries (such as old versions of 
 You can automatically generate/update the modern entrypoint and configuration structure using the following command:
 
 ```bash
-make setup-legacy-configs
+make setup-configs
 ```
 
 ### What does this command do?
