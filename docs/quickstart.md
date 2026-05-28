@@ -12,6 +12,18 @@ Before starting, ensure you have:
 
 ---
 
+## ⚙️ 1. Environment Initialization (`make init`)
+
+Before starting the stack for the first time, you should initialize your local configuration:
+- Run the initialization command:
+  ```bash
+  make init
+  ```
+- This command copies `.env.dist` to `.env` and automatically configures your unique `PROJECT_ID` and `PROJECT_NAME` (either by auto-detecting them from your directory name or prompting you to input them).
+- Once `.env` is created, you can customize database credentials, ports, and resource limits before starting the containers.
+
+---
+
 ## 🍎 1. macOS Setup
 
 ### Step A: Install Docker
@@ -33,7 +45,11 @@ macOS includes `make` via the Xcode Command Line Tools.
   cd project-folder
   ```
 - Copy your legacy codebase into `docroot/` (see [Dockerization Guide](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/dockerizing-legacy-app.md)).
-- Run the setup tool to create `index.php`:
+- Initialize the environment configuration:
+  ```bash
+  make init
+  ```
+- Run the setup tool to scan libraries and create `index.php`:
   ```bash
   make setup-index
   ```
@@ -74,6 +90,7 @@ To avoid running every `make` or `docker` command with `sudo`, add your user to 
 ### Step D: Run the Stack
 - Clone the repo, place your code in `docroot/`, and run:
   ```bash
+  make init
   make setup-index
   make start
   ```
@@ -112,8 +129,9 @@ For Windows development, **WSL2 (Windows Subsystem for Linux)** is highly recomm
   cd project-folder
   ```
 - Place your code in `docroot/` inside the WSL2 system.
-- Run setup and start:
+- Initialize and start the stack:
   ```bash
+  make init
   make setup-index
   make start
   ```
@@ -137,8 +155,9 @@ If you must run the stack directly inside the native Windows filesystem without 
 #### Step C: Run the Stack
 - Open a **Git Bash** terminal window.
 - Clone the repository and navigate inside the folder.
-- Run setup and start:
+- Initialize and start the stack:
   ```bash
+  make init
   make setup-index
   make start
   ```
