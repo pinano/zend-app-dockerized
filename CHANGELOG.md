@@ -1,3 +1,15 @@
+## v2026.05.29 (2026-05-29)
+
+- refactor: improve database container detection and use project-specific environment for docker-backup.sh dumps (d193285)
+- fix: correct quoting in PHP_VERSION extraction regex to handle single quotes properly (a7a2d57)
+- feat: delegate environment initialization to a dedicated script for better interactivity and maintenance (9e3b549)
+- fix: improve database backup reliability with dynamic container resolution, temporary directory cleanup, and sanitized SQL dumps. (4f49843)
+- feat: add progress visualization to file and database backups using pv when running interactively (df2469d)
+- fix: increase net_write_timeout and net_read_timeout during database backups to prevent connection timeouts (daec6bc)
+- fix: improve Telegram notification reliability with timeouts and add dump flags for mariadb/mysqldump stability (612ad98)
+- feat: add --single-transaction and --quick flags to database dump commands (86921e4)
+- feat: add automated backup script with configuration and include profile-check warnings in Makefile commands (5573d96)
+
 ## v2026.05.28.1 (2026-05-28)
 
 - docs: add make init environment initialization step to quickstart guide (1767071)
