@@ -37,10 +37,15 @@ send_telegram_message() {
     log_info "Sending Telegram notification..."
     if command -v curl &> /dev/null; then
         local response
-        response=$(curl -s -w "\n%{http_code}" -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        # Use connect-timeout, max-time, and catch exit codes to prevent crashing under set -e
+        response=$(curl -s -S -w "\n%{http_code}" --connect-timeout 10 --max-time 30 \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
             -d "parse_mode=HTML" \
-            --data-urlencode "text=${message}")
+            --data-urlencode "text=${message}" 2>&1) || {
+            log_warn "curl command failed (network, DNS, or host down). Cannot reach Telegram API."
+            return 0
+        }
         
         local http_code
         http_code=$(echo "$response" | tail -n1)
@@ -48,6 +53,7 @@ send_telegram_message() {
             log_info "Telegram notification sent successfully."
         else
             log_warn "Failed to send Telegram notification (HTTP Status: ${http_code})."
+            log_warn "Telegram API response detail: $(echo "$response" | head -n-1)"
         fi
     else
         log_warn "curl command not found. Cannot send Telegram notification."
@@ -250,9 +256,9 @@ process_project_backup() {
             read -r DUMP_PASS
             read -r DUMP_DB
             if command -v mariadb-dump >/dev/null 2>&1; then
-                exec mariadb-dump --single-transaction --quick -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
             else
-                exec mysqldump --single-transaction --quick -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
             fi
         ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" > "$temp_sql_file"; then
             
