@@ -108,6 +108,21 @@ PROJECT_TARGET_DIR="${TARGET_DIR}/project"
 DB_TARGET_DIR="${TARGET_DIR}/db"
 
 # --- Single Instance Lock (flock) ---
+HAS_LOCK=0
+cleanup_lock() {
+    if [[ "${HAS_LOCK:-0}" -eq 1 ]]; then
+        # Release lock descriptor
+        exec 9>&- 2>/dev/null || true
+        if [[ -f "$LOCK_FILE" ]]; then
+            rm -f "$LOCK_FILE"
+        fi
+    fi
+}
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap cleanup_lock EXIT
+
+
 if [[ -n "$LOCK_FILE" ]]; then
     # Open the lockfile on descriptor 9
     exec 9>"$LOCK_FILE"
@@ -116,6 +131,7 @@ if [[ -n "$LOCK_FILE" ]]; then
         log_error "Another instance of docker-backup.sh is already running (lock active: ${LOCK_FILE}). Exiting."
         exit 1
     fi
+    HAS_LOCK=1
 fi
 
 # --- Mount & Canary Failsafe Verification ---
