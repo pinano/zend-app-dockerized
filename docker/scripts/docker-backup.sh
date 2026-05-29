@@ -95,6 +95,12 @@ TEMP_DIR="${TEMP_DIR:-/tmp}"
 DB_TIMEOUT="${DB_TIMEOUT:-1h}"
 TAR_TIMEOUT="${TAR_TIMEOUT:-2h}"
 
+# Validate Retention Days is a positive integer
+if [[ ! "$RETENTION_DAYS" =~ ^[0-9]+$ ]] || [[ "$RETENTION_DAYS" -le 0 ]]; then
+    log_error "RETENTION_DAYS must be a positive integer! Value provided: ${RETENTION_DAYS}"
+    exit 1
+fi
+
 # --- Setup Target Directories ---
 MY_HOSTNAME=$(hostname)
 TARGET_DIR="${BACKUP_ROOT_DIR}/${PROXMOX_HOST}/${MY_HOSTNAME}"
@@ -111,6 +117,16 @@ if [[ -n "$LOCK_FILE" ]]; then
         exit 1
     fi
 fi
+
+# --- Temporary Directory Cleanup Handler ---
+CURRENT_TEMP_DIR=""
+cleanup_temp_dir() {
+    if [[ -n "${CURRENT_TEMP_DIR:-}" && -d "$CURRENT_TEMP_DIR" ]]; then
+        log_warn "Cleaning up temporary directory on exit: ${CURRENT_TEMP_DIR}"
+        rm -rf "$CURRENT_TEMP_DIR"
+    fi
+}
+trap cleanup_temp_dir EXIT
 
 # --- Mount & Canary Failsafe Verification ---
 # 1. Verify BACKUP_ROOT_DIR is indeed a mount point (checks LXC mp0 mount is active)
@@ -142,7 +158,7 @@ parse_env_var() {
     local file="$1"
     local key="$2"
     if [[ -f "$file" ]]; then
-        grep -E "^[[:space:]]*${key}=" "$file" | head -n 1 | cut -d'=' -f2- | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^["\x27]//' -e 's/["\x27]$//'
+        (grep -E "^[[:space:]]*${key}=" "$file" || true) | head -n 1 | cut -d'=' -f2- | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^["\x27]//' -e 's/["\x27]$//'
     fi
 }
 
@@ -215,36 +231,28 @@ process_project_backup() {
     fi
 
     log_info "Creating project files backup (${backup_type})..."
-    
-    # Check if running interactively (TTY) and if pv is installed
-    if [[ -t 1 ]] && command -v pv &>/dev/null; then
-        if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
-            "${exclude_args[@]}" \
-            -f - \
-            -C "$(dirname "$project_dir")" \
-            "$project_dir_basename" | pv > "$project_backup_file"; then
-            log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
-        else
-            log_error "Failed to create project files backup for ${project_name}!"
-            proj_status="ERROR"
-            HAS_ERRORS=1
-        fi
+    if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
+        "${exclude_args[@]}" \
+        -f "$project_backup_file" \
+        -C "$(dirname "$project_dir")" \
+        "$project_dir_basename"; then
+        log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
     else
-        if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
-            "${exclude_args[@]}" \
-            -f "$project_backup_file" \
-            -C "$(dirname "$project_dir")" \
-            "$project_dir_basename"; then
-            log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
-        else
-            log_error "Failed to create project files backup for ${project_name}!"
-            proj_status="ERROR"
-            HAS_ERRORS=1
-        fi
+        log_error "Failed to create project files backup for ${project_name}!"
+        proj_status="ERROR"
+        HAS_ERRORS=1
     fi
 
     # 3. Database Backup (Full Daily)
-    local db_container="${project_name}-db"
+    local db_container=""
+    if command -v docker &> /dev/null; then
+        # Try to resolve container name using docker compose in project directory (subshell prevents side-effects)
+        db_container=$( (cd "$project_dir" && docker compose ps --format '{{.Names}}' db 2>/dev/null || true) | head -n 1 | tr -d '\r\n')
+    fi
+    # Fallback to default name if compose query failed or returned empty
+    if [[ -z "${db_container:-}" ]]; then
+        db_container="${project_name}-db"
+    fi
     
     # Check if database is configured, and if docker container is running
     if [[ -z "$db_name" || -z "$db_user" || -z "$db_pass" ]]; then
@@ -262,41 +270,27 @@ process_project_backup() {
         # Create a temporary folder to store the SQL dump file before archiving
         local temp_db_dir
         temp_db_dir=$(mktemp -d "${TEMP_DIR}/docker-backup-db-XXXXXX")
+        CURRENT_TEMP_DIR="$temp_db_dir"
         local temp_sql_file="${temp_db_dir}/${backup_prefix}-db.sql"
         local db_backup_file="${DB_TARGET_DIR}/${backup_prefix}-db-${timestamp}.tar.gz"
 
         # Stream the dump securely from the container. Credentials are passed
         # via stdin here-string to prevent exposing them in host shell process lists (ps aux).
-        local dump_success=0
-        if [[ -t 1 ]] && command -v pv &>/dev/null; then
-            if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
-                read -r DUMP_USER
-                read -r DUMP_PASS
-                read -r DUMP_DB
-                if command -v mariadb-dump >/dev/null 2>&1; then
-                    exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
-                else
-                    exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
-                fi
-            ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" | pv > "$temp_sql_file"; then
-                dump_success=1
+        # We also filter out DEFINER clauses to match the Makefile "make db export" behavior.
+        if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
+            read -r DUMP_USER
+            read -r DUMP_PASS
+            read -r DUMP_DB
+            export MYSQL_PWD="$DUMP_PASS"
+            if command -v mariadb-dump >/dev/null 2>&1; then
+                exec mariadb-dump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
+            else
+                exec mysqldump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
             fi
-        else
-            if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
-                read -r DUMP_USER
-                read -r DUMP_PASS
-                read -r DUMP_DB
-                if command -v mariadb-dump >/dev/null 2>&1; then
-                    exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
-                else
-                    exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
-                fi
-            ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" > "$temp_sql_file"; then
-                dump_success=1
-            fi
-        fi
-
-        if [[ "$dump_success" -eq 1 ]]; then
+        ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" \
+        | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' \
+        > "$temp_sql_file"; then
+            
             # Compress the dump SQL file into a tar.gz package
             if tar -czf "$db_backup_file" -C "$temp_db_dir" "${backup_prefix}-db.sql"; then
                 log_info "Database backup completed successfully: $(basename "$db_backup_file")"
@@ -314,6 +308,7 @@ process_project_backup() {
         
         # Clean up temporary directory and files
         rm -rf "$temp_db_dir"
+        CURRENT_TEMP_DIR=""
     fi
 
     # 4. Enforce Retention (Keep last RETENTION_DAYS backups, i.e., delete on day RETENTION_DAYS+1)
