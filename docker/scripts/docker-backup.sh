@@ -359,7 +359,7 @@ process_project_backup() {
 
     # Append status line to the Telegram report
     local fmt_line
-    fmt_line=$(printf "• <code>%-22s (%-14s | DB: %s)</code>" "${backup_prefix}:" "${proj_status} (${backup_type})" "${db_status}")
+    fmt_line=$(printf "• <code>%-18s %-10s | %s</code>" "${backup_prefix}:" "${proj_status} (${backup_type})" "${db_status}")
     BACKUP_REPORT="${BACKUP_REPORT}
 ${fmt_line}"
 }
@@ -408,7 +408,7 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
     elapsed_seconds=$(( $(date +%s) - START_TIME ))
     elapsed_time=$(format_duration $elapsed_seconds)
 
-    msg=$(printf "🚀 <b>[%s/%s] Backup</b>\n\nStatus: %s %s\nDuration: %s\n\n<b>Project details:</b>%s" \
+    msg=$(printf "🚀 <b>[%s/%s] Backup</b>\n\nStatus: %s %s\nDuration: %s\n\n<b>Project details (Files | DB):</b>%s" \
         "$PROXMOX_HOST" "$MY_HOSTNAME" "$status_emoji" "$status_text" "$elapsed_time" "$BACKUP_REPORT")
 
     send_telegram_message "$msg"
