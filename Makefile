@@ -304,45 +304,7 @@ setup-index:
 
 .PHONY: init
 init:
-	@if [ ! -f .env ]; then \
-		echo "⚙️  Initializing .env from .env.dist..."; \
-		cp .env.dist .env; \
-		dir_name=$$(basename "$$(pwd)"); \
-		pid=$$(echo "$$dir_name" | cut -d'-' -f1); \
-		if echo "$$pid" | grep -Eq '^[0-9]+$$'; then \
-			pname=$$(echo "$$dir_name" | cut -d'-' -f2-); \
-			echo "🔍 Detected PROJECT_ID: $$pid, PROJECT_NAME: $$pname"; \
-			if [ "$$(uname)" = "Darwin" ]; then \
-				sed -i '' "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
-				sed -i '' "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
-			else \
-				sed -i "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
-				sed -i "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
-			fi; \
-		else \
-			printf "🔢 Enter PROJECT_ID (e.g., 999): " && read pid; \
-			if [ -n "$$pid" ]; then \
-				if [ "$$(uname)" = "Darwin" ]; then \
-					sed -i '' "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
-				else \
-					sed -i "s|^PROJECT_ID=.*|PROJECT_ID=$$pid|" .env; \
-				fi; \
-				echo "✅ PROJECT_ID set to $$pid"; \
-			fi; \
-			default_pname=$$(echo "$$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]//g'); \
-			printf "📛 Enter PROJECT_NAME (default: $$default_pname): " && read pname_input; \
-			pname=$${pname_input:-$$default_pname}; \
-			if [ "$$(uname)" = "Darwin" ]; then \
-				sed -i '' "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
-			else \
-				sed -i "s|^PROJECT_NAME=.*|PROJECT_NAME=$$pname|" .env; \
-			fi; \
-			echo "✅ PROJECT_NAME set to $$pname"; \
-		fi; \
-		echo "✅ .env created. Please review variables before starting."; \
-	else \
-		echo "ℹ️  .env already exists."; \
-	fi
+	@./docker/scripts/init-env.sh
 
 .PHONY: start
 start:
