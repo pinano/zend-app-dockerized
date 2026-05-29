@@ -405,8 +405,7 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
         BACKUP_REPORT="\n• No projects found to backup."
     fi
 
-    local elapsed_seconds=$(( $(date +%s) - START_TIME ))
-    local elapsed_time
+    elapsed_seconds=$(( $(date +%s) - START_TIME ))
     elapsed_time=$(format_duration $elapsed_seconds)
 
     msg=$(printf "🚀 <b>[%s/%s] Projects Backup</b>\n\nStatus: %s %s\nDuration: %s\n\n<b>Project details:</b>%s" \
