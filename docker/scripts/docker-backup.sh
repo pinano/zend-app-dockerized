@@ -118,16 +118,6 @@ if [[ -n "$LOCK_FILE" ]]; then
     fi
 fi
 
-# --- Temporary Directory Cleanup Handler ---
-CURRENT_TEMP_DIR=""
-cleanup_temp_dir() {
-    if [[ -n "${CURRENT_TEMP_DIR:-}" && -d "$CURRENT_TEMP_DIR" ]]; then
-        log_warn "Cleaning up temporary directory on exit: ${CURRENT_TEMP_DIR}"
-        rm -rf "$CURRENT_TEMP_DIR"
-    fi
-}
-trap cleanup_temp_dir EXIT
-
 # --- Mount & Canary Failsafe Verification ---
 # 1. Verify BACKUP_ROOT_DIR is indeed a mount point (checks LXC mp0 mount is active)
 if ! mountpoint -q "$BACKUP_ROOT_DIR"; then
@@ -272,17 +262,9 @@ process_project_backup() {
     else
         log_info "Creating full database dump..."
         
-        # Create a temporary folder to store the SQL dump file before archiving
-        local temp_db_dir
-        temp_db_dir=$(mktemp -d "${TEMP_DIR}/docker-backup-db-XXXXXX")
-        CURRENT_TEMP_DIR="$temp_db_dir"
-        local temp_sql_file="${temp_db_dir}/${backup_prefix}-db.sql"
+        # Define SQL and target backup file paths in host metadata directory (avoiding RAM-backed tmpfs)
+        local temp_sql_file="${METADATA_DIR}/${backup_prefix}-db-${timestamp}.sql"
         local db_backup_file="${DB_TARGET_DIR}/${backup_prefix}-db-${timestamp}.tar.gz"
-
-        # Write credentials to a temporary config file inside the container via stdin redirection.
-        # This prevents credentials from exposing in host or container process lists (ps aux).
-        printf "[client]\nuser=%s\npassword=%s\n" "$db_user" "$db_pass" \
-            | docker exec -i "$db_container" sh -c 'cat > /tmp/dump.cnf && chmod 600 /tmp/dump.cnf'
 
         # Check dump command availability inside the container (mariadb-dump vs mysqldump)
         local dump_cmd="mariadb-dump"
@@ -293,16 +275,16 @@ process_project_backup() {
         # Stream the dump securely from the container.
         # We use --quick to prevent client memory buffering (prevents container OOM crash on large databases).
         # We also filter out DEFINER clauses.
-        if timeout "$DB_TIMEOUT" docker exec -i "$db_container" "$dump_cmd" \
-            --defaults-extra-file=/tmp/dump.cnf \
+        if timeout "$DB_TIMEOUT" docker exec -i -e MYSQL_PWD="$db_pass" "$db_container" "$dump_cmd" \
             --single-transaction \
             --quick \
+            -u "$db_user" \
             "$db_name" \
             | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' \
             > "$temp_sql_file"; then
             
             # Compress the dump SQL file into a tar.gz package
-            if tar -czf "$db_backup_file" -C "$temp_db_dir" "${backup_prefix}-db.sql"; then
+            if tar -czf "$db_backup_file" -C "$METADATA_DIR" "$(basename "$temp_sql_file")"; then
                 log_info "Database backup completed successfully: $(basename "$db_backup_file")"
                 db_status="OK"
             else
@@ -316,12 +298,8 @@ process_project_backup() {
             HAS_ERRORS=1
         fi
         
-        # Clean up temporary configuration file inside the container
-        docker exec -i "$db_container" rm -f /tmp/dump.cnf || true
-        
-        # Clean up temporary directory and files
-        rm -rf "$temp_db_dir"
-        CURRENT_TEMP_DIR=""
+        # Clean up temporary SQL file from host metadata directory
+        rm -f "$temp_sql_file"
     fi
 
     # 4. Enforce Retention (Keep last RETENTION_DAYS backups, i.e., delete on day RETENTION_DAYS+1)
