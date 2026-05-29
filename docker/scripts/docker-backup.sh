@@ -13,6 +13,8 @@
 
 set -euo pipefail
 
+START_TIME=$(date +%s)
+
 # --- Logging Helpers ---
 log_info() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [INFO] $*"
@@ -26,9 +28,27 @@ log_error() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [ERROR] $*" >&2
 }
 
+# --- Duration Helper ---
+format_duration() {
+    local secs=$1
+    local h=$((secs / 3600))
+    local m=$(( (secs % 3600) / 60 ))
+    local s=$((secs % 60))
+    local formatted=""
+    if [[ $h -gt 0 ]]; then
+        formatted="${h}h "
+    fi
+    if [[ $m -gt 0 || $h -gt 0 ]]; then
+        formatted="${formatted}${m}m "
+    fi
+    formatted="${formatted}${s}s"
+    echo "$formatted"
+}
+
 # --- Send Telegram Notification ---
 send_telegram_message() {
     local message="$1"
+    TELEGRAM_SENT=1
     
     if [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]]; then
         return
@@ -109,7 +129,10 @@ DB_TARGET_DIR="${TARGET_DIR}/db"
 
 # --- Single Instance Lock (flock) ---
 HAS_LOCK=0
+TELEGRAM_SENT=0
+SILENT_EXIT=0
 cleanup_lock() {
+    local exit_code=$?
     if [[ "${HAS_LOCK:-0}" -eq 1 ]]; then
         # Release lock descriptor
         exec 9>&- 2>/dev/null || true
@@ -117,10 +140,16 @@ cleanup_lock() {
             rm -f "$LOCK_FILE"
         fi
     fi
+    
+    # If the script aborted/failed and we have not sent any Telegram notification yet, send an alert
+    if [[ "$exit_code" -ne 0 && "${TELEGRAM_SENT:-0}" -ne 1 && "${SILENT_EXIT:-0}" -ne 1 ]]; then
+        send_telegram_message "⚠️ <b>[${PROXMOX_HOST:-pve-node-01}/${MY_HOSTNAME:-$(hostname)}] Backup Script Aborted!</b>\n\nThe script exited unexpectedly with code <code>${exit_code}</code>. Please check the system logs." || true
+    fi
 }
 trap 'exit 130' INT
 trap 'exit 143' TERM
 trap cleanup_lock EXIT
+
 
 
 if [[ -n "$LOCK_FILE" ]]; then
@@ -129,6 +158,7 @@ if [[ -n "$LOCK_FILE" ]]; then
     # Attempt non-blocking write lock
     if ! flock -n 9; then
         log_error "Another instance of docker-backup.sh is already running (lock active: ${LOCK_FILE}). Exiting."
+        SILENT_EXIT=1
         exit 1
     fi
     HAS_LOCK=1
@@ -202,8 +232,8 @@ process_project_backup() {
     log_info "Resolved Project Name: ${project_name} (ID: ${project_id:-None})"
 
     # Status tracking for Telegram report
-    local proj_status="OK"
-    local db_status="SKIPPED"
+    local proj_status="🟢 OK"
+    local db_status="⚪ SKIPPED"
 
     # 2. Project Files Backup (Incremental / tar --listed-incremental)
     # Monthly snar filename creates a natural FULL backup on the 1st of the month
@@ -245,7 +275,7 @@ process_project_backup() {
         log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
     else
         log_error "Failed to create project files backup for ${project_name}!"
-        proj_status="ERROR"
+        proj_status="🔴 ERR"
         HAS_ERRORS=1
     fi
 
@@ -268,13 +298,13 @@ process_project_backup() {
     # Check if database is configured, and if docker container is running
     if [[ -z "$db_name" || -z "$db_user" || -z "$db_pass" ]]; then
         log_info "No database configured (DB_NAME/DB_USER/DB_PASS not set in .env). Skipping database backup."
-        db_status="N/A"
+        db_status="⚪ N/A"
     elif ! command -v docker &> /dev/null; then
         log_warn "Docker command not found on host. Skipping database backup."
-        db_status="SKIPPED (No Docker)"
+        db_status="⚪ SKIPPED (No Docker)"
     elif ! docker ps --format '{{.Names}}' | grep -q "^${db_container}$"; then
         log_warn "Database container '${db_container}' for '${project_name}' is not running. Skipping database backup."
-        db_status="SKIPPED (Stopped)"
+        db_status="⚪ SKIPPED (Stopped)"
     else
         log_info "Creating full database dump..."
         
@@ -302,15 +332,15 @@ process_project_backup() {
             # Compress the dump SQL file into a tar.gz package
             if tar -czf "$db_backup_file" -C "$METADATA_DIR" "$(basename "$temp_sql_file")"; then
                 log_info "Database backup completed successfully: $(basename "$db_backup_file")"
-                db_status="OK"
+                db_status="🟢 OK"
             else
                 log_error "Failed to compress database SQL file!"
-                db_status="ERROR (Compress)"
+                db_status="🔴 ERR (Compress)"
                 HAS_ERRORS=1
             fi
         else
             log_error "Failed to dump database from container ${db_container} for project ${project_name}!"
-            db_status="ERROR (Dump)"
+            db_status="🔴 ERR (Dump)"
             HAS_ERRORS=1
         fi
         
@@ -329,7 +359,7 @@ process_project_backup() {
 
     # Append status line to the Telegram report
     BACKUP_REPORT="${BACKUP_REPORT}
-• <b>${backup_prefix}</b> (Files: ${proj_status} | DB: ${db_status})"
+• <b>${backup_prefix}</b> (${proj_status} (${backup_type}) | DB: ${db_status})"
 }
 
 # --- Main Logic ---
@@ -373,12 +403,16 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
         BACKUP_REPORT="\n• No projects found to backup."
     fi
 
-    msg=$(printf "🚀 <b>[%s/%s] Projects Backup</b>\n\nStatus: %s %s\n\n<b>Project details:</b>%s" \
-        "$PROXMOX_HOST" "$MY_HOSTNAME" "$status_emoji" "$status_text" "$BACKUP_REPORT")
+    local elapsed_seconds=$(( $(date +%s) - START_TIME ))
+    local elapsed_time
+    elapsed_time=$(format_duration $elapsed_seconds)
+
+    msg=$(printf "🚀 <b>[%s/%s] Projects Backup</b>\n\nStatus: %s %s\nDuration: %s\n\n<b>Project details:</b>%s" \
+        "$PROXMOX_HOST" "$MY_HOSTNAME" "$status_emoji" "$status_text" "$elapsed_time" "$BACKUP_REPORT")
 
     send_telegram_message "$msg"
 fi
 
 log_info "========================================================"
-log_info "Backup process completed successfully!"
+log_info "Backup process completed successfully in $(format_duration $(( $(date +%s) - START_TIME )))!"
 log_info "========================================================"
