@@ -215,16 +215,32 @@ process_project_backup() {
     fi
 
     log_info "Creating project files backup (${backup_type})..."
-    if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
-        "${exclude_args[@]}" \
-        -f "$project_backup_file" \
-        -C "$(dirname "$project_dir")" \
-        "$project_dir_basename"; then
-        log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
+    
+    # Check if running interactively (TTY) and if pv is installed
+    if [[ -t 1 ]] && command -v pv &>/dev/null; then
+        if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
+            "${exclude_args[@]}" \
+            -f - \
+            -C "$(dirname "$project_dir")" \
+            "$project_dir_basename" | pv > "$project_backup_file"; then
+            log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
+        else
+            log_error "Failed to create project files backup for ${project_name}!"
+            proj_status="ERROR"
+            HAS_ERRORS=1
+        fi
     else
-        log_error "Failed to create project files backup for ${project_name}!"
-        proj_status="ERROR"
-        HAS_ERRORS=1
+        if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
+            "${exclude_args[@]}" \
+            -f "$project_backup_file" \
+            -C "$(dirname "$project_dir")" \
+            "$project_dir_basename"; then
+            log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
+        else
+            log_error "Failed to create project files backup for ${project_name}!"
+            proj_status="ERROR"
+            HAS_ERRORS=1
+        fi
     fi
 
     # 3. Database Backup (Full Daily)
@@ -251,17 +267,36 @@ process_project_backup() {
 
         # Stream the dump securely from the container. Credentials are passed
         # via stdin here-string to prevent exposing them in host shell process lists (ps aux).
-        if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
-            read -r DUMP_USER
-            read -r DUMP_PASS
-            read -r DUMP_DB
-            if command -v mariadb-dump >/dev/null 2>&1; then
-                exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
-            else
-                exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+        local dump_success=0
+        if [[ -t 1 ]] && command -v pv &>/dev/null; then
+            if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
+                read -r DUMP_USER
+                read -r DUMP_PASS
+                read -r DUMP_DB
+                if command -v mariadb-dump >/dev/null 2>&1; then
+                    exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                else
+                    exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                fi
+            ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" | pv > "$temp_sql_file"; then
+                dump_success=1
             fi
-        ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" > "$temp_sql_file"; then
-            
+        else
+            if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
+                read -r DUMP_USER
+                read -r DUMP_PASS
+                read -r DUMP_DB
+                if command -v mariadb-dump >/dev/null 2>&1; then
+                    exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                else
+                    exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                fi
+            ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" > "$temp_sql_file"; then
+                dump_success=1
+            fi
+        fi
+
+        if [[ "$dump_success" -eq 1 ]]; then
             # Compress the dump SQL file into a tar.gz package
             if tar -czf "$db_backup_file" -C "$temp_db_dir" "${backup_prefix}-db.sql"; then
                 log_info "Database backup completed successfully: $(basename "$db_backup_file")"
