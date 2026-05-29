@@ -244,11 +244,19 @@ process_project_backup() {
     fi
 
     # 3. Database Backup (Full Daily)
-    local db_running=0
+    # Flush disk cache and pause to let the host/network catch up after writing the project archive.
+    # This prevents IO queue saturation from causing socket timeout errors during the DB dump.
+    sync || true
+    sleep 5
+
+    local db_container=""
     if command -v docker &> /dev/null; then
-        if (cd "$project_dir" && docker compose ps --services --filter "status=running" 2>/dev/null | grep -q "^db$"); then
-            db_running=1
-        fi
+        # Try to resolve container name using docker compose in project directory (subshell prevents side-effects)
+        db_container=$( (cd "$project_dir" && docker compose ps --format '{{.Names}}' db 2>/dev/null || true) | head -n 1 | tr -d '\r\n')
+    fi
+    # Fallback to default name if compose query failed or returned empty
+    if [[ -z "${db_container:-}" ]]; then
+        db_container="${project_name}-db"
     fi
     
     # Check if database is configured, and if docker container is running
@@ -258,8 +266,8 @@ process_project_backup() {
     elif ! command -v docker &> /dev/null; then
         log_warn "Docker command not found on host. Skipping database backup."
         db_status="SKIPPED (No Docker)"
-    elif [[ "$db_running" -eq 0 ]]; then
-        log_warn "Database container/service for '${project_name}' is not running. Skipping database backup."
+    elif ! docker ps --format '{{.Names}}' | grep -q "^${db_container}$"; then
+        log_warn "Database container '${db_container}' for '${project_name}' is not running. Skipping database backup."
         db_status="SKIPPED (Stopped)"
     else
         log_info "Creating full database dump..."
@@ -271,29 +279,27 @@ process_project_backup() {
         local temp_sql_file="${temp_db_dir}/${backup_prefix}-db.sql"
         local db_backup_file="${DB_TARGET_DIR}/${backup_prefix}-db-${timestamp}.tar.gz"
 
-        # Stream the dump securely from the container. Credentials are passed
-        # via stdin here-string to prevent exposing them in host shell process lists (ps aux).
-        # We run inside the project directory and source set-env-vars.sh to match the exact environment of "make db export".
+        # Write credentials to a temporary config file inside the container via stdin redirection.
+        # This prevents credentials from exposing in host or container process lists (ps aux).
+        printf "[client]\nuser=%s\npassword=%s\n" "$db_user" "$db_pass" \
+            | docker exec -i "$db_container" sh -c 'cat > /tmp/dump.cnf && chmod 600 /tmp/dump.cnf'
+
+        # Check dump command availability inside the container (mariadb-dump vs mysqldump)
+        local dump_cmd="mariadb-dump"
+        if ! docker exec -i "$db_container" command -v mariadb-dump &>/dev/null; then
+            dump_cmd="mysqldump"
+        fi
+
+        # Stream the dump securely from the container.
+        # We use --quick to prevent client memory buffering (prevents container OOM crash on large databases).
         # We also filter out DEFINER clauses.
-        if timeout "$DB_TIMEOUT" sh -c '
-            cd "$1"
-            if [ -f "./docker/scripts/set-env-vars.sh" ]; then
-                . ./docker/scripts/set-env-vars.sh
-            fi
-            docker compose exec -T db sh -c '\''
-                read -r DUMP_USER
-                read -r DUMP_PASS
-                read -r DUMP_DB
-                export MYSQL_PWD="$DUMP_PASS"
-                if command -v mariadb-dump >/dev/null 2>&1; then
-                    exec mariadb-dump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
-                else
-                    exec mysqldump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
-                fi
-            '\''
-        ' sh "$project_dir" <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" \
-        | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' \
-        > "$temp_sql_file"; then
+        if timeout "$DB_TIMEOUT" docker exec -i "$db_container" "$dump_cmd" \
+            --defaults-extra-file=/tmp/dump.cnf \
+            --single-transaction \
+            --quick \
+            "$db_name" \
+            | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' \
+            > "$temp_sql_file"; then
             
             # Compress the dump SQL file into a tar.gz package
             if tar -czf "$db_backup_file" -C "$temp_db_dir" "${backup_prefix}-db.sql"; then
@@ -305,10 +311,13 @@ process_project_backup() {
                 HAS_ERRORS=1
             fi
         else
-            log_error "Failed to dump database from service db for project ${project_name}!"
+            log_error "Failed to dump database from container ${db_container} for project ${project_name}!"
             db_status="ERROR (Dump)"
             HAS_ERRORS=1
         fi
+        
+        # Clean up temporary configuration file inside the container
+        docker exec -i "$db_container" rm -f /tmp/dump.cnf || true
         
         # Clean up temporary directory and files
         rm -rf "$temp_db_dir"
