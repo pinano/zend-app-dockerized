@@ -268,7 +268,7 @@ process_project_backup() {
 
         # Check dump command availability inside the container (mariadb-dump vs mysqldump)
         local dump_cmd="mariadb-dump"
-        if ! docker exec "$db_container" command -v mariadb-dump &>/dev/null; then
+        if ! docker exec "$db_container" sh -c 'command -v mariadb-dump' &>/dev/null; then
             dump_cmd="mysqldump"
         fi
 
