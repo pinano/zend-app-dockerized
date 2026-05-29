@@ -129,7 +129,7 @@ else
 fi
 
 # Load existing PHP_VERSION in dist as default fallback
-dist_php=$(grep '^PHP_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"\x27\r ' || echo "7.4")
+dist_php=$(grep '^PHP_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"'\''\r ' || echo "7.4")
 
 # --- Prompts ---
 
