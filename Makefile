@@ -638,6 +638,10 @@ doctor: _ensure_env
 
 .PHONY: open-ports
 open-ports: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
+		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env. Sftp port will not be exposed."; \
+	fi
 	@echo "🌐 Opening DB and SFTP ports externally (0.0.0.0)..."
 	$(call set_env,DB_BIND_IP,0.0.0.0)
 	$(call set_env,SFTP_BIND_IP,0.0.0.0)
@@ -645,6 +649,10 @@ open-ports: _ensure_env
 
 .PHONY: close-ports
 close-ports: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
+		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env."; \
+	fi
 	@echo "🔒 Closing DB and SFTP ports (127.0.0.1)..."
 	$(call set_env,DB_BIND_IP,127.0.0.1)
 	$(call set_env,SFTP_BIND_IP,127.0.0.1)
@@ -664,12 +672,22 @@ close-db: _ensure_env
 
 .PHONY: open-sftp
 open-sftp: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
+		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env."; \
+		echo "   To enable it, edit .env and add 'sftp' to COMPOSE_PROFILES (e.g. COMPOSE_PROFILES=sftp)."; \
+	fi
 	@echo "🌐 Opening SFTP port externally (0.0.0.0)..."
 	$(call set_env,SFTP_BIND_IP,0.0.0.0)
 	@echo "⚠️  SFTP port configured to be open. Run 'make start' to apply."
 
 .PHONY: close-sftp
 close-sftp: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
+		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env."; \
+		echo "   To enable it, edit .env and add 'sftp' to COMPOSE_PROFILES (e.g. COMPOSE_PROFILES=sftp)."; \
+	fi
 	@echo "🔒 Closing SFTP port (127.0.0.1)..."
 	$(call set_env,SFTP_BIND_IP,127.0.0.1)
 	@echo "✅ SFTP port configured to be closed. Run 'make start' to apply."
