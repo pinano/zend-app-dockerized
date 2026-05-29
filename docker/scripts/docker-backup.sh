@@ -126,7 +126,7 @@ fi
 # --- Setup Target Directories ---
 MY_HOSTNAME=$(hostname)
 TARGET_DIR="${BACKUP_ROOT_DIR}/${PROXMOX_HOST}/${MY_HOSTNAME}"
-PROJECT_TARGET_DIR="${TARGET_DIR}/project"
+PROJECT_TARGET_DIR="${TARGET_DIR}/files"
 DB_TARGET_DIR="${TARGET_DIR}/db"
 
 # --- Single Instance Lock (flock) ---
@@ -151,8 +151,6 @@ cleanup_lock() {
 trap 'exit 130' INT
 trap 'exit 143' TERM
 trap cleanup_lock EXIT
-
-
 
 if [[ -n "$LOCK_FILE" ]]; then
     # Open the lockfile on descriptor 9
@@ -247,7 +245,7 @@ process_project_backup() {
 
     local timestamp
     timestamp=$(date +%Y%m%d_%H%M%S)
-    local project_backup_file="${PROJECT_TARGET_DIR}/${backup_prefix}-project-${timestamp}-${backup_type}.tar.gz"
+    local project_backup_file="${PROJECT_TARGET_DIR}/${backup_prefix}-files-${timestamp}-${backup_type}.tar.gz"
 
     # Build tar exclude arguments dynamically
     local exclude_args=()
@@ -356,7 +354,7 @@ process_project_backup() {
     local mtime_val=$((RETENTION_DAYS - 1))
     
     log_info "Enforcing retention policy (${RETENTION_DAYS} days) for ${project_name}..."
-    find "$PROJECT_TARGET_DIR" -type f -name "${backup_prefix}-project-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
+    find "$PROJECT_TARGET_DIR" -type f -name "${backup_prefix}-files-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
     find "$DB_TARGET_DIR" -type f -name "${backup_prefix}-db-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
 
     # Append status line to the Telegram report
@@ -408,7 +406,7 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
     elapsed_seconds=$(( $(date +%s) - START_TIME ))
     elapsed_time=$(format_duration $elapsed_seconds)
 
-    msg=$(printf "🚀 <b>[%s/%s] Projects Backup</b>\n\nStatus: %s %s\nDuration: %s\n\n<b>Project details:</b>%s" \
+    msg=$(printf "🚀 <b>[%s/%s] Backup</b>\n\nStatus: %s %s\nDuration: %s\n\n<b>Project details:</b>%s" \
         "$PROXMOX_HOST" "$MY_HOSTNAME" "$status_emoji" "$status_text" "$elapsed_time" "$BACKUP_REPORT")
 
     send_telegram_message "$msg"
