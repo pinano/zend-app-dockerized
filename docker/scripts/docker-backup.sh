@@ -232,7 +232,7 @@ process_project_backup() {
     log_info "Resolved Project Name: ${project_name} (ID: ${project_id:-None})"
 
     # Status tracking for Telegram report
-    local proj_status="🟢 OK"
+    local proj_status="🟢"
     local db_status="⚪ SKIPPED"
 
     # 2. Project Files Backup (Incremental / tar --listed-incremental)
@@ -275,7 +275,7 @@ process_project_backup() {
         log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
     else
         log_error "Failed to create project files backup for ${project_name}!"
-        proj_status="🔴 ERR"
+        proj_status="🔴"
         HAS_ERRORS=1
     fi
 
@@ -332,15 +332,15 @@ process_project_backup() {
             # Compress the dump SQL file into a tar.gz package
             if tar -czf "$db_backup_file" -C "$METADATA_DIR" "$(basename "$temp_sql_file")"; then
                 log_info "Database backup completed successfully: $(basename "$db_backup_file")"
-                db_status="🟢 OK"
+                db_status="🟢"
             else
                 log_error "Failed to compress database SQL file!"
-                db_status="🔴 ERR (Compress)"
+                db_status="🔴 (Compress)"
                 HAS_ERRORS=1
             fi
         else
             log_error "Failed to dump database from container ${db_container} for project ${project_name}!"
-            db_status="🔴 ERR (Dump)"
+            db_status="🔴 (Dump)"
             HAS_ERRORS=1
         fi
         
@@ -358,8 +358,10 @@ process_project_backup() {
     find "$DB_TARGET_DIR" -type f -name "${backup_prefix}-db-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
 
     # Append status line to the Telegram report
+    local fmt_line
+    fmt_line=$(printf "• <code>%-22s (%-14s | DB: %s)</code>" "${backup_prefix}:" "${proj_status} (${backup_type})" "${db_status}")
     BACKUP_REPORT="${BACKUP_REPORT}
-• <b>${backup_prefix}</b> (${proj_status} (${backup_type}) | DB: ${db_status})"
+${fmt_line}"
 }
 
 # --- Main Logic ---
