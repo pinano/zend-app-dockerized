@@ -268,14 +268,14 @@ process_project_backup() {
 
         # Check dump command availability inside the container (mariadb-dump vs mysqldump)
         local dump_cmd="mariadb-dump"
-        if ! docker exec -i "$db_container" command -v mariadb-dump &>/dev/null; then
+        if ! docker exec "$db_container" command -v mariadb-dump &>/dev/null; then
             dump_cmd="mysqldump"
         fi
 
         # Stream the dump securely from the container.
         # We use --quick to prevent client memory buffering (prevents container OOM crash on large databases).
         # We also filter out DEFINER clauses.
-        if timeout "$DB_TIMEOUT" docker exec -i -e MYSQL_PWD="$db_pass" "$db_container" "$dump_cmd" \
+        if timeout "$DB_TIMEOUT" docker exec -e MYSQL_PWD="$db_pass" "$db_container" "$dump_cmd" \
             --single-transaction \
             --quick \
             -u "$db_user" \
