@@ -244,14 +244,11 @@ process_project_backup() {
     fi
 
     # 3. Database Backup (Full Daily)
-    local db_container=""
+    local db_running=0
     if command -v docker &> /dev/null; then
-        # Try to resolve container name using docker compose in project directory (subshell prevents side-effects)
-        db_container=$( (cd "$project_dir" && docker compose ps --format '{{.Names}}' db 2>/dev/null || true) | head -n 1 | tr -d '\r\n')
-    fi
-    # Fallback to default name if compose query failed or returned empty
-    if [[ -z "${db_container:-}" ]]; then
-        db_container="${project_name}-db"
+        if (cd "$project_dir" && docker compose ps --services --filter "status=running" 2>/dev/null | grep -q "^db$"); then
+            db_running=1
+        fi
     fi
     
     # Check if database is configured, and if docker container is running
@@ -261,8 +258,8 @@ process_project_backup() {
     elif ! command -v docker &> /dev/null; then
         log_warn "Docker command not found on host. Skipping database backup."
         db_status="SKIPPED (No Docker)"
-    elif ! docker ps --format '{{.Names}}' | grep -q "^${db_container}$"; then
-        log_warn "Database container '${db_container}' is not running. Skipping database backup."
+    elif [[ "$db_running" -eq 0 ]]; then
+        log_warn "Database container/service for '${project_name}' is not running. Skipping database backup."
         db_status="SKIPPED (Stopped)"
     else
         log_info "Creating full database dump..."
@@ -276,18 +273,25 @@ process_project_backup() {
 
         # Stream the dump securely from the container. Credentials are passed
         # via stdin here-string to prevent exposing them in host shell process lists (ps aux).
-        # We also filter out DEFINER clauses to match the Makefile "make db export" behavior.
-        if timeout "$DB_TIMEOUT" docker exec -i "$db_container" sh -c '
-            read -r DUMP_USER
-            read -r DUMP_PASS
-            read -r DUMP_DB
-            export MYSQL_PWD="$DUMP_PASS"
-            if command -v mariadb-dump >/dev/null 2>&1; then
-                exec mariadb-dump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
-            else
-                exec mysqldump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
+        # We run inside the project directory and source set-env-vars.sh to match the exact environment of "make db export".
+        # We also filter out DEFINER clauses.
+        if timeout "$DB_TIMEOUT" sh -c '
+            cd "$1"
+            if [ -f "./docker/scripts/set-env-vars.sh" ]; then
+                . ./docker/scripts/set-env-vars.sh
             fi
-        ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" \
+            docker compose exec -T db sh -c '\''
+                read -r DUMP_USER
+                read -r DUMP_PASS
+                read -r DUMP_DB
+                export MYSQL_PWD="$DUMP_PASS"
+                if command -v mariadb-dump >/dev/null 2>&1; then
+                    exec mariadb-dump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
+                else
+                    exec mysqldump --single-transaction -u "$DUMP_USER" "$DUMP_DB"
+                fi
+            '\''
+        ' sh "$project_dir" <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" \
         | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' \
         > "$temp_sql_file"; then
             
@@ -301,7 +305,7 @@ process_project_backup() {
                 HAS_ERRORS=1
             fi
         else
-            log_error "Failed to dump database from container ${db_container}!"
+            log_error "Failed to dump database from service db for project ${project_name}!"
             db_status="ERROR (Dump)"
             HAS_ERRORS=1
         fi
