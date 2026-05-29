@@ -256,9 +256,9 @@ process_project_backup() {
             read -r DUMP_PASS
             read -r DUMP_DB
             if command -v mariadb-dump >/dev/null 2>&1; then
-                exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                exec mariadb-dump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
             else
-                exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
+                exec mysqldump --single-transaction --quick --skip-ssl --max_allowed_packet=512M --init-command="SET SESSION net_write_timeout=86400,net_read_timeout=86400" -u"$DUMP_USER" -p"$DUMP_PASS" "$DUMP_DB"
             fi
         ' <<< "$(printf "%s\n%s\n%s\n" "$db_user" "$db_pass" "$db_name")" > "$temp_sql_file"; then
             
