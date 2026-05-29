@@ -48,6 +48,8 @@ format_duration() {
 # --- Send Telegram Notification ---
 send_telegram_message() {
     local message="$1"
+    # Translate literal backslash-n sequences into actual newline characters safely
+    message="${message//\\n/$'\n'}"
     TELEGRAM_SENT=1
     
     if [[ -z "${TELEGRAM_BOT_TOKEN:-}" || -z "${TELEGRAM_CHAT_ID:-}" ]]; then
