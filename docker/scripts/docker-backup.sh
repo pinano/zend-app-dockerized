@@ -267,14 +267,25 @@ process_project_backup() {
     fi
 
     log_info "Creating project files backup (${backup_type})..."
-    if timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
+    local tar_rc=0
+    # Temporarily disable exit on error to capture tar exit status (0=success, 1=warnings, 2=fatal)
+    set +e
+    timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
         "${exclude_args[@]}" \
         -f "$project_backup_file" \
         -C "$(dirname "$project_dir")" \
-        "$project_dir_basename"; then
-        log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
+        "$project_dir_basename"
+    tar_rc=$?
+    set -e
+
+    if [[ "$tar_rc" -eq 0 || "$tar_rc" -eq 1 ]]; then
+        if [[ "$tar_rc" -eq 1 ]]; then
+            log_warn "Project files backup completed with warnings (some files changed during read) for ${project_name}."
+        else
+            log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
+        fi
     else
-        log_error "Failed to create project files backup for ${project_name}!"
+        log_error "Failed to create project files backup for ${project_name}! (tar exit code: ${tar_rc})"
         proj_status="🔴"
         HAS_ERRORS=1
     fi
