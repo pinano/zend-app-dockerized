@@ -1,3 +1,15 @@
+## v2026.05.29.1 (2026-05-29)
+
+- refactor: rename project backup directory and file naming conventions to files for clarity (10f1ebf)
+- refactor: remove local scope from elapsed_seconds variable in backup script (567d946)
+- fix: interpret literal backslash-n sequences as newlines in Telegram notifications (a027a4a)
+- feat: add Telegram error notifications, duration tracking, and enriched status logging to backup script (3815c1e)
+- feat: implement file locking cleanup with trap signals in docker-backup.sh (4d28c53)
+- fix: execute dump command check within a shell session to correctly verify binary availability (d4334a2)
+- fix: remove interactive flag from docker exec commands to prevent terminal stream errors in backup script (998d4bd)
+- refactor: optimize database backup process by bypassing temporary directories and using environment variables for authentication (8f2a09c)
+- fix: improve database backup reliability with disk syncing, dynamic container resolution, and secure memory-efficient dump execution (0194a34)
+
 ## v2026.05.29 (2026-05-29)
 
 - refactor: improve database container detection and use project-specific environment for docker-backup.sh dumps (d193285)
