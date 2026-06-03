@@ -166,6 +166,7 @@ services:
       # Re-enable STRICT_TRANS_TABLES only after auditing application SQL for strict compliance.
       - --sql_mode=ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION
       - --max-connections=${DB_MAX_CONNECTIONS:-50}
+      - --log-warnings=1
       - --innodb-buffer-pool-size=${DB_INNODB_BUFFER_POOL_SIZE:-128M}
       - --innodb-buffer-pool-instances=${DB_INNODB_BUFFER_POOL_INSTANCES:-1}
       - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-32M}
