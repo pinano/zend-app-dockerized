@@ -1,3 +1,8 @@
+## v2026.06.03.1 (2026-06-03)
+
+- fix: improve PHP error reporting stability, add ZF1 library detection, update default reporting level, and refactor cron environment variable export (7921847)
+- refactor: overhaul sizing profiles to include six granular tiers and update Makefile commands (e56ea89)
+
 ## v2026.06.03 (2026-06-03)
 
 - refactor: update default database binding from 127.0.0.1 to 172.17.0.1 for improved Docker bridge connectivity. (f7772a3)
