@@ -85,9 +85,11 @@ fi
 if [ -n "$PHP_ERROR_REPORTING" ]; then
     echo "⚙️  Evaluating PHP_ERROR_REPORTING to integer for FPM pool..."
     INT_VAL=$(php -r '
-        $expr = trim(getenv("PHP_ERROR_REPORTING"), "\"\x27");
+        $expr = trim(getenv("PHP_ERROR_REPORTING"));
+        $expr = trim($expr, "\"\x27");
+        $expr = trim($expr);
         if (empty($expr)) {
-            echo E_ALL & ~E_NOTICE & ~E_DEPRECATED;
+            echo E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED;
             exit;
         }
         if (preg_match("/^[a-zA-Z0-9_\s&~|()]+$/", $expr)) {
