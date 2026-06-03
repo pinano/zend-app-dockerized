@@ -937,13 +937,13 @@ size-show: _ensure_env
 	elif [ "$$APP_MEM" = "256M" ] && [ "$$DB_MEM" = "512M" ] && [ "$$FPM_CHILDREN" = "10" ]; then \
 		PROFILE="🟢 SMALL (S - Staging/Low traffic)"; \
 	elif [ "$$APP_MEM" = "512M" ] && [ "$$DB_MEM" = "1.5G" ] && [ "$$FPM_CHILDREN" = "25" ]; then \
-		PROFILE="🟡 MEDIUM (M - Prod Pequeña)"; \
+		PROFILE="🟡 MEDIUM (M - Small Production)"; \
 	elif [ "$$APP_MEM" = "1G" ] && [ "$$DB_MEM" = "3G" ] && [ "$$FPM_CHILDREN" = "40" ]; then \
-		PROFILE="🟠 LARGE (L - Prod Estándar)"; \
+		PROFILE="🟠 LARGE (L - Standard Production)"; \
 	elif [ "$$APP_MEM" = "2G" ] && [ "$$DB_MEM" = "6G" ] && [ "$$FPM_CHILDREN" = "75" ]; then \
-		PROFILE="🔴 EXTRA LARGE (XL - Prod Alta)"; \
+		PROFILE="🔴 EXTRA LARGE (XL - High Production)"; \
 	elif [ "$$APP_MEM" = "4G" ] && [ "$$DB_MEM" = "12G" ] && [ "$$FPM_CHILDREN" = "150" ]; then \
-		PROFILE="🔥 DOUBLE EXTRA LARGE (XXL - Prod Crítica)"; \
+		PROFILE="🔥 DOUBLE EXTRA LARGE (XXL - Critical Production)"; \
 	fi; \
 	echo "📊 Current sizing configuration (Profile: $$PROFILE):"; \
 	echo "─────────────────────────────────"

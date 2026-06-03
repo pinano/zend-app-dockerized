@@ -144,10 +144,10 @@ You can enable additional stack features for specific legacy applications via `.
 | `make crontab-init` | Create example crontab file |
 | `make size-xs` | Apply Extra Small sizing profile (Dev/Hobby) |
 | `make size-s` | Apply Small sizing profile (Staging/Low traffic) |
-| `make size-m` | Apply Medium sizing profile (Prod Pequeña) |
-| `make size-l` | Apply Large sizing profile (Prod Estándar) |
-| `make size-xl` | Apply Extra Large sizing profile (Prod Alta) |
-| `make size-xxl` | Apply Double Extra Large sizing profile (Prod Crítica) |
+| `make size-m` | Apply Medium sizing profile (Small Production) |
+| `make size-l` | Apply Large sizing profile (Standard Production) |
+| `make size-xl` | Apply Extra Large sizing profile (High Production) |
+| `make size-xxl` | Apply Double Extra Large sizing profile (Critical Production) |
 | `make size-show` | Show current sizing config |
 
 ## Services
