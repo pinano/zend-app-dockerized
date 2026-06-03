@@ -142,9 +142,12 @@ You can enable additional stack features for specific legacy applications via `.
 | `make redis-monitor`| Monitor Redis commands in real-time |
 | `make redis-ping`   | Ping Redis server |
 | `make crontab-init` | Create example crontab file |
-| `make size-small` | Apply Small sizing profile |
-| `make size-medium` | Apply Medium sizing profile |
-| `make size-large` | Apply Large sizing profile |
+| `make size-xs` | Apply Extra Small sizing profile (Dev/Hobby) |
+| `make size-s` | Apply Small sizing profile (Staging/Low traffic) |
+| `make size-m` | Apply Medium sizing profile (Prod Pequeña) |
+| `make size-l` | Apply Large sizing profile (Prod Estándar) |
+| `make size-xl` | Apply Extra Large sizing profile (Prod Alta) |
+| `make size-xxl` | Apply Double Extra Large sizing profile (Prod Crítica) |
 | `make size-show` | Show current sizing config |
 
 ## Services

@@ -7,9 +7,12 @@ The provided `Makefile` includes predefined sizing profiles that automatically a
 
 To apply a profile, run:
 ```bash
-make size-small   # For low traffic (< 500 visits/day)
-make size-medium  # For medium traffic (500 - 5000 visits/day)
-make size-large   # For high traffic (> 5000 visits/day)
+make size-xs   # For micro app/local dev (< 100 visits/day)
+make size-s    # For low traffic (< 1000 visits/day)
+make size-m    # For medium traffic (1000 - 5000 visits/day)
+make size-l    # For high traffic (5000 - 15000 visits/day)
+make size-xl   # For very high traffic (15000 - 50000 visits/day)
+make size-xxl  # For critical/high-load app (> 50000 visits/day)
 ```
 
 Always run `make start` or `make restart` to apply environment variable changes to running containers.
@@ -19,39 +22,36 @@ You can view active sizing values easily using `make size-show`.
 
 The table below shows all variables configured by each profile:
 
-| Variable / Parameter | Description | SMALL | MEDIUM | LARGE |
-| :--- | :--- | :---: | :---: | :---: |
-| **App Service (`app`)** | | | | |
-| `APP_CPUS` | CPU limit for the web container | `0.5` | `1.0` | `2.0` |
-| `APP_MEMORY` | Memory limit for the web container | `256M` | `512M` | `1G` |
-| `APP_MEMORY_RESERVATION` | Reserved memory for the web container | `64M` | `128M` | `256M` |
-| `APP_TMPFS_SIZE` | Size of high-performance `tmpfs` volume | `128M` | `256M` | `512M` |
-| `PHP_MEMORY_LIMIT` | Memory limit per PHP script execution | `128M` | `256M` | `512M` |
-| `PHP_OPCACHE_MEMORY_CONSUMPTION`| OPcache buffer memory size | `128MB` | `256MB` | `512MB` |
-| `PHP_OPCACHE_HUGE_CODE_PAGES` | OPcache Huge Code Pages (1=on, 0=off) | `0` | `0` | `1` |
-| **Apache & PHP-FPM** | | | | |
-| `APACHE_MAX_REQUEST_WORKERS` | Max concurrent Apache threads (aligns with FPM) | `10` | `25` | `50` |
-| `PHP_FPM_PM_CONTROL` | PHP-FPM process manager type | `dynamic` | `dynamic` | `dynamic` |
-| `PHP_FPM_PM_MAX_CHILDREN` | Max PHP-FPM worker processes | `10` | `25` | `50` |
-| `PHP_FPM_PM_START_SERVERS` | Initial worker processes spawned | `3` | `8` | `15` |
-| `PHP_FPM_PM_MIN_SPARE_SERVERS`| Min idle worker processes | `2` | `5` | `10` |
-| `PHP_FPM_PM_MAX_SPARE_SERVERS`| Max idle worker processes | `5` | `15` | `30` |
-| `PHP_FPM_PM_MAX_REQUESTS` | Workers recycled after N requests | `500` | `500` | `500` |
-| `PHP_FPM_SLOWLOG_TIMEOUT` | Slow request log threshold | `10s` | `10s` | `5s` |
-| **Database Service (`db`)** | | | | |
-| `DB_CPUS` | CPU limit for the MariaDB container | `1.0` | `2.0` | `4.0` |
-| `DB_MEMORY` | Memory limit for the MariaDB container | `512M` | `1G` | `3G` |
-| `DB_MEMORY_RESERVATION` | Reserved memory for the DB container | `128M` | `256M` | `512M` |
-| `DB_MAX_CONNECTIONS` | Max database client connections | `50` | `100` | `300` |
-| `DB_INNODB_BUFFER_POOL_SIZE` | Size of InnoDB buffer pool | `128M` | `256M` | `1G` |
-| `DB_INNODB_BUFFER_POOL_INSTANCES`| Number of InnoDB buffer pool chunks | `1` | `1` | `2` |
-| `DB_INNODB_LOG_FILE_SIZE` | Size of transaction log files | `32M` | `64M` | `256M` |
-| `DB_TABLE_OPEN_CACHE` | Max open table descriptors | `2000` | `2000` | `4000` |
-| `DB_TABLE_DEFINITION_CACHE` | Max table schema metadata cached | `1400` | `1400` | `2000` |
-| **Cron Service (`cron`)** | | | | |
-| `CRON_CPUS` | CPU limit for the CLI/cron container | `0.1` | `0.25` | `0.5` |
-| `CRON_MEMORY` | Memory limit for the CLI/cron container | `128M` | `256M` | `512M` |
-| `CRON_MEMORY_RESERVATION` | Reserved memory for the cron container | `32M` | `64M` | `128M` |
+| Variable / Parameter | Description | XS | S | M | L | XL | XXL |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **App Service (`app`)** | | | | | | | |
+| `APP_CPUS` | CPU limit for the web container | `0.25` | `0.5` | `1.0` | `2.0` | `4.0` | `8.0` |
+| `APP_MEMORY` | Memory limit for the web container | `128M` | `256M` | `512M` | `1G` | `2G` | `4G` |
+| `APP_MEMORY_RESERVATION` | Reserved memory for the web container | `32M` | `64M` | `128M` | `256M` | `512M` | `1G` |
+| `APP_TMPFS_SIZE` | Size of high-performance `tmpfs` volume | `64M` | `128M` | `256M` | `512M` | `1G` | `2G` |
+| `PHP_MEMORY_LIMIT` | Memory limit per PHP script execution | `64M` | `128M` | `256M` | `512M` | `768M` | `1G` |
+| `PHP_OPCACHE_MEMORY_CONSUMPTION`| OPcache buffer memory size | `64MB` | `128MB` | `256MB` | `512MB` | `512MB` | `1GB` |
+| `PHP_OPCACHE_HUGE_CODE_PAGES` | OPcache Huge Code Pages (1=on, 0=off) | `0` | `0` | `0` | `0` | `1` | `1` |
+| **Apache & PHP-FPM** | | | | | | | |
+| `APACHE_MAX_REQUEST_WORKERS` | Max concurrent Apache threads | `5` | `10` | `25` | `40` | `75` | `150` |
+| `PHP_FPM_PM_MAX_CHILDREN` | Max PHP-FPM worker processes | `5` | `10` | `25` | `40` | `75` | `150` |
+| `PHP_FPM_PM_START_SERVERS` | Initial worker processes spawned | `2` | `3` | `8` | `12` | `20` | `40` |
+| `PHP_FPM_PM_MIN_SPARE_SERVERS`| Min idle worker processes | `1` | `2` | `5` | `8` | `15` | `30` |
+| `PHP_FPM_PM_MAX_SPARE_SERVERS`| Max idle worker processes | `3` | `5` | `15` | `24` | `45` | `90` |
+| `PHP_FPM_PM_MAX_REQUESTS` | Workers recycled after N requests | `500` | `500` | `500` | `500` | `500` | `500` |
+| `PHP_FPM_SLOWLOG_TIMEOUT` | Slow request log threshold | `10s` | `10s` | `10s` | `10s` | `5s` | `5s` |
+| **Database Service (`db`)** | | | | | | | |
+| `DB_CPUS` | CPU limit for the MariaDB container | `0.5` | `1.0` | `2.0` | `3.0` | `6.0` | `12.0` |
+| `DB_MEMORY` | Memory limit for the MariaDB container | `256M` | `512M` | `1.5G` | `3G` | `6G` | `12G` |
+| `DB_MEMORY_RESERVATION` | Reserved memory for the DB container | `64M` | `128M` | `256M` | `512M` | `1G` | `2G` |
+| `DB_MAX_CONNECTIONS` | Max database client connections | `20` | `50` | `100` | `150` | `300` | `500` |
+| `DB_INNODB_BUFFER_POOL_SIZE` | Size of InnoDB buffer pool | `64M` | `128M` | `512M` | `1.5G` | `3G` | `8G` |
+| `DB_INNODB_BUFFER_POOL_INSTANCES`| Number of InnoDB buffer pool chunks | `1` | `1` | `1` | `1` | `2` | `4` |
+| `DB_INNODB_LOG_FILE_SIZE` | Size of transaction log files | `16M` | `32M` | `128M` | `256M` | `512M` | `1G` |
+| **Cron Service (`cron`)** | | | | | | | |
+| `CRON_CPUS` | CPU limit for the CLI/cron container | `0.05` | `0.1` | `0.25` | `0.5` | `1.0` | `2.0` |
+| `CRON_MEMORY` | Memory limit for the CLI/cron container | `64M` | `128M` | `256M` | `512M` | `1G` | `2G` |
+| `CRON_MEMORY_RESERVATION` | Reserved memory for the cron container | `16M` | `32M` | `64M` | `128M` | `256M` | `512M` |
 
 ## Critical Warning: SWAP Usage and tmpfs
 
@@ -66,7 +66,7 @@ Using `tmpfs` is dramatically faster than SSD I/O. However, if your host server 
 3. The "in-memory" cache operations effectively become heavily delayed disk operations, causing catastrophic performance collapses and 500/504 Gateway errors.
 
 **Recommendation:**
-- Strictly control memory using `size-small` on hosts with low RAM.
+- Strictly control memory using `size-xs` or `size-s` on hosts with low RAM.
 - Use monitoring tools (like Netdata, Datadog or Prometheus) to specifically alert if the host begins allocating SWAP.
 - Ensure the sum of all `*_MEMORY` limits across all tenants combined never exceeds 90% of the host's physical RAM, leaving 10% for OS overhead.
 
@@ -87,9 +87,9 @@ The `make validate` target will warn you if your configuration is at risk. If yo
 
 For applications with **thousands of tables** (common in large legacy ZF1 backoffices with per-client table schemas):
 
-- **`DB_TABLE_OPEN_CACHE`**: Each concurrent query needs open table descriptors. With thousands of tables and hundreds of connections, the default (2000) may not be enough. The LARGE profile sets this to 4000.
-- **`DB_TABLE_DEFINITION_CACHE`**: Caches `.frm` file metadata. The default (400) is far too low for large schemas — every cache miss triggers a disk read. The LARGE profile sets this to 2000.
-- **`DB_INNODB_BUFFER_POOL_SIZE`**: For databases with thousands of tables, just the InnoDB data dictionary and adaptive hash index can consume hundreds of MB. The LARGE profile sets 1G with `DB_MEMORY=3G`.
+- **`DB_TABLE_OPEN_CACHE`**: Each concurrent query needs open table descriptors. With thousands of tables and hundreds of connections, the default (2000) may not be enough. The L/XL/XXL profiles set this to `4000`/`6000`/`10000`.
+- **`DB_TABLE_DEFINITION_CACHE`**: Caches `.frm` file metadata. The default (400) is far too low for large schemas — every cache miss triggers a disk read. The L/XL/XXL profiles set this to `2000`/`3000`/`5000`.
+- **`DB_INNODB_BUFFER_POOL_SIZE`**: For databases with thousands of tables, just the InnoDB data dictionary and adaptive hash index can consume hundreds of MB. The L/XL/XXL profiles allocate larger buffer pools (up to 8G) to keep the working set in memory.
 
 ## SQL Mode Compatibility Note
 

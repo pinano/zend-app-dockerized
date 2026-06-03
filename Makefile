@@ -169,23 +169,41 @@ $(MAKECMDGOALS):
 				printf "  Configure .env to restrict the SFTP port ($(SFTP_PORT)) to 127.0.0.1 (localhost only).\n" ; \
 				printf "  Note: Run 'make start' to apply configuration.\n" ; \
 				;; \
-			"size-small") \
-				printf "$(BOLD)make size-small$(RESET)\n" ; \
-				printf "  Apply SMALL sizing profile to .env (< 500 visits/day).\n" ; \
-				printf "  Restricts resource limits. Perfect for local dev and low-memory servers.\n" ; \
-				printf "  Note: Run 'make restart' to apply changes.\n" ; \
+			"size-xs") \
+				printf "$(BOLD)make size-xs$(RESET)\n" ; \
+				printf "  Apply EXTRA SMALL sizing profile to .env (< 100 visits/day).\n" ; \
+				printf "  Extremely lightweight. Perfect for dev density and VPS limits.\n" ; \
+				printf "  Note: Run 'make start' to apply changes.\n" ; \
 				;; \
-			"size-medium") \
-				printf "$(BOLD)make size-medium$(RESET)\n" ; \
-				printf "  Apply MEDIUM sizing profile to .env (500 - 5000 visits/day).\n" ; \
-				printf "  Balanced resource allocation for moderate production environments.\n" ; \
-				printf "  Note: Run 'make restart' to apply changes.\n" ; \
+			"size-s") \
+				printf "$(BOLD)make size-s$(RESET)\n" ; \
+				printf "  Apply SMALL sizing profile to .env (< 1000 visits/day).\n" ; \
+				printf "  Balanced lightweight configuration, default for local development.\n" ; \
+				printf "  Note: Run 'make start' to apply changes.\n" ; \
 				;; \
-			"size-large") \
-				printf "$(BOLD)make size-large$(RESET)\n" ; \
-				printf "  Apply LARGE sizing profile to .env (> 5000 visits/day).\n" ; \
-				printf "  High-performance configuration. Allocates more RAM and enables OPcache Huge Code Pages.\n" ; \
-				printf "  Note: Run 'make restart' to apply changes.\n" ; \
+			"size-m") \
+				printf "$(BOLD)make size-m$(RESET)\n" ; \
+				printf "  Apply MEDIUM sizing profile to .env (1000 - 5000 visits/day).\n" ; \
+				printf "  Suitable for low-traffic production setups.\n" ; \
+				printf "  Note: Run 'make start' to apply changes.\n" ; \
+				;; \
+			"size-l") \
+				printf "$(BOLD)make size-l$(RESET)\n" ; \
+				printf "  Apply LARGE sizing profile to .env (5000 - 15000 visits/day).\n" ; \
+				printf "  Standard production profile with optimized DB pool size.\n" ; \
+				printf "  Note: Run 'make start' to apply changes.\n" ; \
+				;; \
+			"size-xl") \
+				printf "$(BOLD)make size-xl$(RESET)\n" ; \
+				printf "  Apply EXTRA LARGE sizing profile to .env (15000 - 50000 visits/day).\n" ; \
+				printf "  High-performance configuration. Enables OPcache Huge Code Pages.\n" ; \
+				printf "  Note: Run 'make start' to apply changes.\n" ; \
+				;; \
+			"size-xxl") \
+				printf "$(BOLD)make size-xxl$(RESET)\n" ; \
+				printf "  Apply DOUBLE EXTRA LARGE sizing profile to .env (> 50000 visits/day).\n" ; \
+				printf "  Critical production profile. Allocates maximum RAM and FPM processes.\n" ; \
+				printf "  Note: Run 'make start' to apply changes.\n" ; \
 				;; \
 			"size-show") \
 				printf "$(BOLD)make size-show$(RESET)\n" ; \
@@ -279,9 +297,12 @@ help:
 	@printf "  $(CYAN)open-sftp$(RESET)     Open only SFTP port ($(SFTP_PORT))\n"
 	@printf "  $(CYAN)close-sftp$(RESET)    Close only SFTP port ($(SFTP_PORT))\n\n"
 	@printf "$(BOLD)Sizing Profiles$(RESET)\n"
-	@printf "  $(CYAN)size-small$(RESET)    Configure .env for low-traffic app (< 500 visits/day)\n"
-	@printf "  $(CYAN)size-medium$(RESET)   Configure .env for medium-traffic app (500-5000 visits/day)\n"
-	@printf "  $(CYAN)size-large$(RESET)    Configure .env for high-traffic app (> 5000 visits/day)\n"
+	@printf "  $(CYAN)size-xs$(RESET)        Configure .env for micro app/local dev (< 100 visits/day)\n"
+	@printf "  $(CYAN)size-s$(RESET)         Configure .env for low-traffic app (< 1000 visits/day)\n"
+	@printf "  $(CYAN)size-m$(RESET)         Configure .env for medium-traffic app (1000-5000 visits/day)\n"
+	@printf "  $(CYAN)size-l$(RESET)         Configure .env for high-traffic app (5000-15000 visits/day)\n"
+	@printf "  $(CYAN)size-xl$(RESET)        Configure .env for very high-traffic app (15000-50000 visits/day)\n"
+	@printf "  $(CYAN)size-xxl$(RESET)       Configure .env for critical/high-load app (> 50000 visits/day)\n"
 	@printf "  $(CYAN)size-show$(RESET)     Show current sizing configuration\n\n"
 	@printf "$(BOLD)Cron Management$(RESET)\n"
 	@printf "  $(CYAN)crontab-init$(RESET)  Create example crontab file\n\n"
@@ -701,9 +722,43 @@ _ensure_env:
 		$(MAKE) --no-print-directory init || exit 1; \
 	fi
 
-.PHONY: size-small
-size-small: _ensure_env
-	@echo "📐 Applying SMALL profile (< 500 visits/day)..."
+.PHONY: size-xs
+size-xs: _ensure_env
+	@echo "📐 Applying EXTRA SMALL profile (< 100 visits/day)..."
+	$(call set_env,APP_CPUS,0.25)
+	$(call set_env,APP_MEMORY,128M)
+	$(call set_env,APP_MEMORY_RESERVATION,32M)
+	$(call set_env,CRON_CPUS,0.05)
+	$(call set_env,CRON_MEMORY,64M)
+	$(call set_env,CRON_MEMORY_RESERVATION,16M)
+	$(call set_env,DB_CPUS,0.5)
+	$(call set_env,DB_MEMORY,256M)
+	$(call set_env,DB_MEMORY_RESERVATION,64M)
+	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,64M)
+	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,1)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,16M)
+	$(call set_env,DB_MAX_CONNECTIONS,20)
+	$(call set_env,DB_TABLE_OPEN_CACHE,1000)
+	$(call set_env,DB_TABLE_DEFINITION_CACHE,700)
+	$(call set_env,PHP_MEMORY_LIMIT,64M)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,64)
+	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,8)
+	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,10000)
+	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,0)
+	$(call set_env,APP_TMPFS_SIZE,64M)
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,5)
+	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,5)
+	$(call set_env,PHP_FPM_PM_START_SERVERS,2)
+	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,1)
+	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,3)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
+	@echo "✅ EXTRA SMALL profile applied. Run 'make start' to apply changes."
+
+.PHONY: size-s
+size-s: _ensure_env
+	@echo "📐 Applying SMALL profile (< 1000 visits/day)..."
 	$(call set_env,APP_CPUS,0.5)
 	$(call set_env,APP_MEMORY,256M)
 	$(call set_env,APP_MEMORY_RESERVATION,64M)
@@ -733,11 +788,11 @@ size-small: _ensure_env
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,5)
 	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
-	@echo "✅ SMALL profile applied. Run 'make restart' to apply changes."
+	@echo "✅ SMALL profile applied. Run 'make start' to apply changes."
 
-.PHONY: size-medium
-size-medium: _ensure_env
-	@echo "📐 Applying MEDIUM profile (500-5000 visits/day)..."
+.PHONY: size-m
+size-m: _ensure_env
+	@echo "📐 Applying MEDIUM profile (1000-5000 visits/day)..."
 	$(call set_env,APP_CPUS,1.0)
 	$(call set_env,APP_MEMORY,512M)
 	$(call set_env,APP_MEMORY_RESERVATION,128M)
@@ -745,11 +800,11 @@ size-medium: _ensure_env
 	$(call set_env,CRON_MEMORY,256M)
 	$(call set_env,CRON_MEMORY_RESERVATION,64M)
 	$(call set_env,DB_CPUS,2.0)
-	$(call set_env,DB_MEMORY,1G)
+	$(call set_env,DB_MEMORY,1.5G)
 	$(call set_env,DB_MEMORY_RESERVATION,256M)
-	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,256M)
+	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,512M)
 	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,1)
-	$(call set_env,DB_INNODB_LOG_FILE_SIZE,64M)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,128M)
 	$(call set_env,DB_MAX_CONNECTIONS,100)
 	$(call set_env,DB_TABLE_OPEN_CACHE,2000)
 	$(call set_env,DB_TABLE_DEFINITION_CACHE,1400)
@@ -767,41 +822,109 @@ size-medium: _ensure_env
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,15)
 	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
-	@echo "✅ MEDIUM profile applied. Run 'make restart' to apply changes."
+	@echo "✅ MEDIUM profile applied. Run 'make start' to apply changes."
 
-.PHONY: size-large
-size-large: _ensure_env
-	@echo "📐 Applying LARGE profile (> 5000 visits/day)..."
+.PHONY: size-l
+size-l: _ensure_env
+	@echo "📐 Applying LARGE profile (5000-15000 visits/day)..."
 	$(call set_env,APP_CPUS,2.0)
 	$(call set_env,APP_MEMORY,1G)
 	$(call set_env,APP_MEMORY_RESERVATION,256M)
 	$(call set_env,CRON_CPUS,0.5)
 	$(call set_env,CRON_MEMORY,512M)
 	$(call set_env,CRON_MEMORY_RESERVATION,128M)
-	$(call set_env,DB_CPUS,4.0)
+	$(call set_env,DB_CPUS,3.0)
 	$(call set_env,DB_MEMORY,3G)
 	$(call set_env,DB_MEMORY_RESERVATION,512M)
-	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,1G)
-	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,2)
+	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,1.5G)
+	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,1)
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,256M)
-	$(call set_env,DB_MAX_CONNECTIONS,300)
+	$(call set_env,DB_MAX_CONNECTIONS,150)
 	$(call set_env,DB_TABLE_OPEN_CACHE,4000)
 	$(call set_env,DB_TABLE_DEFINITION_CACHE,2000)
 	$(call set_env,PHP_MEMORY_LIMIT,512M)
 	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
 	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,64)
+	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,40000)
+	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,0)
+	$(call set_env,APP_TMPFS_SIZE,512M)
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,40)
+	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,40)
+	$(call set_env,PHP_FPM_PM_START_SERVERS,12)
+	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,8)
+	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,24)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
+	@echo "✅ LARGE profile applied. Run 'make start' to apply changes."
+
+.PHONY: size-xl
+size-xl: _ensure_env
+	@echo "📐 Applying EXTRA LARGE profile (15000-50000 visits/day)..."
+	$(call set_env,APP_CPUS,4.0)
+	$(call set_env,APP_MEMORY,2G)
+	$(call set_env,APP_MEMORY_RESERVATION,512M)
+	$(call set_env,CRON_CPUS,1.0)
+	$(call set_env,CRON_MEMORY,1G)
+	$(call set_env,CRON_MEMORY_RESERVATION,256M)
+	$(call set_env,DB_CPUS,6.0)
+	$(call set_env,DB_MEMORY,6G)
+	$(call set_env,DB_MEMORY_RESERVATION,1G)
+	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,3G)
+	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,2)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,512M)
+	$(call set_env,DB_MAX_CONNECTIONS,300)
+	$(call set_env,DB_TABLE_OPEN_CACHE,6000)
+	$(call set_env,DB_TABLE_DEFINITION_CACHE,3000)
+	$(call set_env,PHP_MEMORY_LIMIT,768M)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,512)
+	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,64)
 	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,60000)
 	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,1)
-	$(call set_env,APP_TMPFS_SIZE,512M)
-	$(call set_env,APACHE_MAX_REQUEST_WORKERS,50)
+	$(call set_env,APP_TMPFS_SIZE,1G)
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,75)
 	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
-	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,50)
-	$(call set_env,PHP_FPM_PM_START_SERVERS,15)
-	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,10)
-	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,30)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,75)
+	$(call set_env,PHP_FPM_PM_START_SERVERS,20)
+	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,15)
+	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,45)
 	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,5s)
-	@echo "✅ LARGE profile applied. Run 'make restart' to apply changes."
+	@echo "✅ EXTRA LARGE profile applied. Run 'make start' to apply changes."
+
+.PHONY: size-xxl
+size-xxl: _ensure_env
+	@echo "📐 Applying DOUBLE EXTRA LARGE profile (> 50000 visits/day)..."
+	$(call set_env,APP_CPUS,8.0)
+	$(call set_env,APP_MEMORY,4G)
+	$(call set_env,APP_MEMORY_RESERVATION,1G)
+	$(call set_env,CRON_CPUS,2.0)
+	$(call set_env,CRON_MEMORY,2G)
+	$(call set_env,CRON_MEMORY_RESERVATION,512M)
+	$(call set_env,DB_CPUS,12.0)
+	$(call set_env,DB_MEMORY,12G)
+	$(call set_env,DB_MEMORY_RESERVATION,2G)
+	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,8G)
+	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,4)
+	$(call set_env,DB_INNODB_LOG_FILE_SIZE,1G)
+	$(call set_env,DB_MAX_CONNECTIONS,500)
+	$(call set_env,DB_TABLE_OPEN_CACHE,10000)
+	$(call set_env,DB_TABLE_DEFINITION_CACHE,5000)
+	$(call set_env,PHP_MEMORY_LIMIT,1G)
+	$(call set_env,PHP_OPCACHE_MEMORY_CONSUMPTION,1024)
+	$(call set_env,PHP_OPCACHE_INTERNED_STRINGS_BUFFER,128)
+	$(call set_env,PHP_OPCACHE_MAX_ACCELERATED_FILES,100000)
+	$(call set_env,PHP_OPCACHE_HUGE_CODE_PAGES,1)
+	$(call set_env,APP_TMPFS_SIZE,2G)
+	$(call set_env,APACHE_MAX_REQUEST_WORKERS,150)
+	$(call set_env,PHP_FPM_PM_CONTROL,dynamic)
+	$(call set_env,PHP_FPM_PM_MAX_CHILDREN,150)
+	$(call set_env,PHP_FPM_PM_START_SERVERS,40)
+	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,30)
+	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,90)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,5s)
+	@echo "✅ DOUBLE EXTRA LARGE profile applied. Run 'make start' to apply changes."
 
 .PHONY: size-show
 size-show: _ensure_env
@@ -809,12 +932,18 @@ size-show: _ensure_env
 	DB_MEM=$$(grep '^DB_MEMORY=' .env | cut -d= -f2 | tr -d '"'\''\r '); \
 	FPM_CHILDREN=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2 | tr -d '"'\''\r '); \
 	PROFILE="⚠️  CUSTOM (modified)"; \
-	if [ "$$APP_MEM" = "256M" ] && [ "$$DB_MEM" = "512M" ] && [ "$$FPM_CHILDREN" = "10" ]; then \
-		PROFILE="🟢 SMALL (Low traffic)"; \
-	elif [ "$$APP_MEM" = "512M" ] && [ "$$DB_MEM" = "1G" ] && [ "$$FPM_CHILDREN" = "25" ]; then \
-		PROFILE="🟡 MEDIUM (Medium traffic)"; \
-	elif [ "$$APP_MEM" = "1G" ] && [ "$$DB_MEM" = "3G" ] && [ "$$FPM_CHILDREN" = "50" ]; then \
-		PROFILE="🔴 LARGE (High traffic)"; \
+	if [ "$$APP_MEM" = "128M" ] && [ "$$DB_MEM" = "256M" ] && [ "$$FPM_CHILDREN" = "5" ]; then \
+		PROFILE="⚪ EXTRA SMALL (XS - Dev/Hobby)"; \
+	elif [ "$$APP_MEM" = "256M" ] && [ "$$DB_MEM" = "512M" ] && [ "$$FPM_CHILDREN" = "10" ]; then \
+		PROFILE="🟢 SMALL (S - Staging/Low traffic)"; \
+	elif [ "$$APP_MEM" = "512M" ] && [ "$$DB_MEM" = "1.5G" ] && [ "$$FPM_CHILDREN" = "25" ]; then \
+		PROFILE="🟡 MEDIUM (M - Prod Pequeña)"; \
+	elif [ "$$APP_MEM" = "1G" ] && [ "$$DB_MEM" = "3G" ] && [ "$$FPM_CHILDREN" = "40" ]; then \
+		PROFILE="🟠 LARGE (L - Prod Estándar)"; \
+	elif [ "$$APP_MEM" = "2G" ] && [ "$$DB_MEM" = "6G" ] && [ "$$FPM_CHILDREN" = "75" ]; then \
+		PROFILE="🔴 EXTRA LARGE (XL - Prod Alta)"; \
+	elif [ "$$APP_MEM" = "4G" ] && [ "$$DB_MEM" = "12G" ] && [ "$$FPM_CHILDREN" = "150" ]; then \
+		PROFILE="🔥 DOUBLE EXTRA LARGE (XXL - Prod Crítica)"; \
 	fi; \
 	echo "📊 Current sizing configuration (Profile: $$PROFILE):"; \
 	echo "─────────────────────────────────"

@@ -19,7 +19,7 @@ Each project establishes its own `backnet` (e.g., `projecta_backnet`, `projectb_
 ### Step 3: Resource Allocation
 When running multiple applications, it's critical to prevent a single buggy application from consuming all the server's CPU or RAM.
 Always use the predefined sizing profiles when setting up a new tenant:
-- Run `make size-small` for low-traffic sites to cap memory and CPU usage aggressively.
+- Run `make size-xs` or `make size-s` for low-traffic sites to cap memory and CPU usage aggressively.
 - Run `make size-show` periodically to audit custom allocations.
 
 ### Step 4: Network and Routing Limitations (Scaling beyond 30+ Apps)
