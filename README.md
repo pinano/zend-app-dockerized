@@ -25,7 +25,7 @@ A modernized Docker stack for running legacy Zend Framework 1.x applications, fe
 - **MariaDB 12**: Latest stable database version.
 - **Performance Tuned**: Optimized `opcache` and `realpath_cache` settings for ZF1.
 - **Tmpfs Integration**: High-performance, ephemeral storage for ZF1 cache/sessions.
-- **Secure by Default**: SFTP and DB ports restricted to localhost.
+- **Secure by Default**: SFTP restricted to localhost, DB restricted to Docker bridge IP.
 - **Traefik Ready**: Integrated labels for Traefik reverse proxy.
 - **Advanced Flexibility**: Built-in support for Redis, Xdebug, Cronjobs, and custom PHP overrides.
 - **Unified Management**: Simple `Makefile` for all common operations.
@@ -135,7 +135,7 @@ You can enable additional stack features for specific legacy applications via `.
 | `make config` | Validate Docker Compose config |
 | `make ctop` | Monitor containers using ctop |
 | `make open-ports` | Expose DB & SFTP ports externally (0.0.0.0) |
-| `make close-ports` | Restrict DB & SFTP ports (127.0.0.1) |
+| `make close-ports` | Restrict DB (172.17.0.1) & SFTP (127.0.0.1) |
 | `make open-db` / `close-db` | Expose or restrict only the DB |
 | `make open-sftp` / `close-sftp` | Expose or restrict only SFTP |
 | `make redis-info` | Show Redis server statistics |

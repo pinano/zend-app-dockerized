@@ -145,7 +145,7 @@ $(MAKECMDGOALS):
 				;; \
 			"close-ports") \
 				printf "$(BOLD)make close-ports$(RESET)\n" ; \
-				printf "  Configure .env to restrict DB ($(DB_PORT)) and SFTP ($(SFTP_PORT)) ports to 127.0.0.1 (localhost only).\n" ; \
+				printf "  Configure .env to restrict DB ($(DB_PORT)) to 172.17.0.1 and SFTP ($(SFTP_PORT)) to 127.0.0.1.\n" ; \
 				printf "  Note: Run 'make start' to apply configuration.\n" ; \
 				;; \
 			"open-db") \
@@ -156,7 +156,7 @@ $(MAKECMDGOALS):
 				;; \
 			"close-db") \
 				printf "$(BOLD)make close-db$(RESET)\n" ; \
-				printf "  Configure .env to restrict the DB port ($(DB_PORT)) to 127.0.0.1 (localhost only).\n" ; \
+				printf "  Configure .env to restrict the DB port ($(DB_PORT)) to 172.17.0.1.\n" ; \
 				printf "  Note: Run 'make start' to apply configuration.\n" ; \
 				;; \
 			"open-sftp") \
@@ -273,7 +273,7 @@ help:
 	@printf "  $(CYAN)ctop$(RESET)          Monitor containers using ctop\n\n"
 	@printf "$(BOLD)Port Management$(RESET)\n"
 	@printf "  $(CYAN)open-ports$(RESET)    Open DB ($(DB_PORT)) & SFTP ($(SFTP_PORT)) ports to the outside world (0.0.0.0)\n"
-	@printf "  $(CYAN)close-ports$(RESET)   Close DB ($(DB_PORT)) & SFTP ($(SFTP_PORT)) ports (restrict to 127.0.0.1)\n"
+	@printf "  $(CYAN)close-ports$(RESET)   Close DB ($(DB_PORT)) & SFTP ($(SFTP_PORT)) ports (restrict DB to 172.17.0.1, SFTP to 127.0.0.1)\n"
 	@printf "  $(CYAN)open-db$(RESET)       Open only DB port ($(DB_PORT))\n"
 	@printf "  $(CYAN)close-db$(RESET)      Close only DB port ($(DB_PORT))\n"
 	@printf "  $(CYAN)open-sftp$(RESET)     Open only SFTP port ($(SFTP_PORT))\n"
@@ -534,9 +534,9 @@ doctor: _ensure_env
 	@PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	DB_PORT="33$$PROJECT_ID"; \
 	SFTP_PORT="22$$PROJECT_ID"; \
-	DB_BIND=$$(grep '^DB_BIND_IP=' .env | cut -d= -f2 | head -1); \
-	DB_BIND=$${DB_BIND:-127.0.0.1}; \
-	SFTP_BIND=$$(grep '^SFTP_BIND_IP=' .env | cut -d= -f2 | head -1); \
+	DB_BIND=$$(grep '^DB_BIND_IP=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
+	DB_BIND=$${DB_BIND:-172.17.0.1}; \
+	SFTP_BIND=$$(grep '^SFTP_BIND_IP=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	SFTP_BIND=$${SFTP_BIND:-127.0.0.1}; \
 	DB_CID=$$(. ./docker/scripts/set-env-vars.sh && docker compose ps -q db 2>/dev/null || true); \
 	SFTP_CID=$$(. ./docker/scripts/set-env-vars.sh && docker compose ps -q sftp 2>/dev/null || true); \
@@ -567,12 +567,12 @@ doctor: _ensure_env
 	else \
 		if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
 			if [ "$$DB_OWNED" -eq 1 ]; then \
-				echo "🔒 DB Port $$DB_PORT is RESTRICTED to localhost (127.0.0.1) in this project (normal)"; \
+				echo "🔒 DB Port $$DB_PORT is RESTRICTED to $$DB_BIND in this project (normal)"; \
 			else \
-				echo "⚠️  WARNING: Port $$DB_PORT is restricted to localhost but is occupied by another process/project!"; \
+				echo "⚠️  WARNING: Port $$DB_PORT is restricted to $$DB_BIND but is occupied by another process/project!"; \
 			fi; \
 		else \
-			echo "🔒 DB Port $$DB_PORT is not open externally in this project (restricted to localhost)"; \
+			echo "🔒 DB Port $$DB_PORT is not open externally in this project (restricted to $$DB_BIND)"; \
 		fi; \
 	fi; \
 	if [ "$$SFTP_BIND" = "0.0.0.0" ]; then \
@@ -615,8 +615,8 @@ close-ports: _ensure_env
 	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
 		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env."; \
 	fi
-	@echo "🔒 Closing DB and SFTP ports (127.0.0.1)..."
-	$(call set_env,DB_BIND_IP,127.0.0.1)
+	@echo "🔒 Restricting DB to 172.17.0.1 and SFTP to 127.0.0.1..."
+	$(call set_env,DB_BIND_IP,172.17.0.1)
 	$(call set_env,SFTP_BIND_IP,127.0.0.1)
 	@echo "✅ Ports configured to be closed. Run 'make start' to apply."
 
@@ -628,8 +628,8 @@ open-db: _ensure_env
 
 .PHONY: close-db
 close-db: _ensure_env
-	@echo "🔒 Closing DB port (127.0.0.1)..."
-	$(call set_env,DB_BIND_IP,127.0.0.1)
+	@echo "🔒 Restricting DB port to 172.17.0.1..."
+	$(call set_env,DB_BIND_IP,172.17.0.1)
 	@echo "✅ DB port configured to be closed. Run 'make start' to apply."
 
 .PHONY: open-sftp
