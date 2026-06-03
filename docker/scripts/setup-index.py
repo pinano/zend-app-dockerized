@@ -39,8 +39,13 @@ def main():
             if os.path.isdir(item_path):
                 # Check for standard subfolders like 'Classes' (common for PHPExcel)
                 classes_path = os.path.join(item_path, 'Classes')
+                # Check for standard subfolders like 'library' (standard for Zend Framework 1 releases)
+                library_path = os.path.join(item_path, 'library')
+                
                 if os.path.isdir(classes_path):
                     container_path = f"/var/www/html/weblibs/{item}/Classes"
+                elif os.path.isdir(library_path):
+                    container_path = f"/var/www/html/weblibs/{item}/library"
                 else:
                     container_path = f"/var/www/html/weblibs/{item}"
                 detected_paths.append(container_path)

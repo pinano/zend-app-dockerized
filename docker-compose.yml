@@ -148,10 +148,10 @@ services:
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-    # 1. Dump Docker env vars to /etc/environment so cron jobs can access DB_HOST, DB_NAME, etc.
+    # 1. Dump Docker env vars to /etc/environment so cron jobs can access all custom variables.
     #    (The vanilla cron daemon strips all inherited environment variables.)
     # 2. Fix permissions for cron.d files (must be owned by root and 644) before starting cron.
-    command: sh -c "printenv | grep -E '^(DB_HOST|DB_NAME|DB_USER|DB_PASS|APP_ENV|TZ|PHP_|USER_ID|GROUP_ID)=' > /etc/environment && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
+    command: sh -c "printenv | grep -v -E '^(PATH|HOME|HOSTNAME|PWD|SHLVL|OLDPWD)=' > /etc/environment && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
     restart: unless-stopped
     networks:
       - backnet
