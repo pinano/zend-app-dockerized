@@ -1,3 +1,10 @@
+## v2026.06.03 (2026-06-03)
+
+- refactor: update default database binding from 127.0.0.1 to 172.17.0.1 for improved Docker bridge connectivity. (f7772a3)
+- fix: handle tar exit code 1 as a successful backup in docker-backup.sh to accommodate files modified during archival (10291b8)
+- style: adjust Telegram backup report formatting and clarify project detail labels (84d2173)
+- refactor: simplify backup status emojis and format Telegram report output as monospaced code blocks (cdd918d)
+
 ## v2026.05.29.1 (2026-05-29)
 
 - refactor: rename project backup directory and file naming conventions to files for clarity (10f1ebf)
