@@ -2,15 +2,15 @@
   <img src="docs/badge.webp" alt="Dockerized Zend App Logo" width="220" />
 </p>
 
-<h1 align="center">Dockerized Legacy ZF1 Application</h1>
+<h1 align="center">Dockerized Legacy ZF1 App Stack</h1>
 
 <p align="center">
-  <strong>🚀 Docking Legacy to the Future: A modern, ultra-performance Docker orchestration for legacy Zend Framework 1.x systems.</strong>
+  <strong>A modern, ultra-performance Docker orchestration for legacy Zend Framework 1.x apps.</strong>
 </p>
 
 <p align="center">
   <a href="file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/PHP-5.6%20|%207.4%20|%208.x-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP Versions" />
+  <img src="https://img.shields.io/badge/PHP-5.x%20|%207.x%20|%208.x-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP Versions" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB" />
   <img src="https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
