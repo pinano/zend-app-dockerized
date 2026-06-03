@@ -1,3 +1,7 @@
+## v2026.06.03.4 (2026-06-03)
+
+- chore: enable database warnings in docker-compose configuration (6617bec)
+
 ## v2026.06.03.3 (2026-06-03)
 
 - fix: update PHP error reporting fallback logic to handle empty and non-numeric values more robustly (e155169)
