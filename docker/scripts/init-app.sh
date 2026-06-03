@@ -103,10 +103,12 @@ if [ -n "$PHP_ERROR_REPORTING" ]; then
     ' 2>/dev/null)
 
     # Robust fallback: check if INT_VAL is a valid number to prevent PHP-FPM boot crashes.
-    if ! [[ "$INT_VAL" =~ ^[0-9]+$ ]]; then
-        echo "⚠️  Failed to evaluate PHP_ERROR_REPORTING expression. Using default error reporting."
-        INT_VAL=$(php -r 'echo E_ALL & ~E_NOTICE & ~E_DEPRECATED;')
-    fi
+    case "$INT_VAL" in
+        "" | *[!0-9]*)
+            echo "⚠️  Failed to evaluate PHP_ERROR_REPORTING expression. Using default error reporting."
+            INT_VAL=$(php -r 'echo E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED;')
+            ;;
+    esac
 
     cat > /usr/local/etc/php-fpm.d/99-dynamic-error-reporting.conf <<EOF
 [www]
