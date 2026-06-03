@@ -1,3 +1,8 @@
+## v2026.06.03.2 (2026-06-03)
+
+- chore: update DB_INNODB_BUFFER_POOL_SIZE from 1.5G to 1536M in Makefile (176c086)
+- chore: translate sizing profile descriptions to English in Makefile and README (6084b97)
+
 ## v2026.06.03.1 (2026-06-03)
 
 - fix: improve PHP error reporting stability, add ZF1 library detection, update default reporting level, and refactor cron environment variable export (7921847)
