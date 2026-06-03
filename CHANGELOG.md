@@ -1,3 +1,8 @@
+## v2026.06.03.3 (2026-06-03)
+
+- fix: update PHP error reporting fallback logic to handle empty and non-numeric values more robustly (e155169)
+- fix: refine PHP_ERROR_REPORTING parsing and update default value to exclude warnings (df8a43f)
+
 ## v2026.06.03.2 (2026-06-03)
 
 - chore: update DB_INNODB_BUFFER_POOL_SIZE from 1.5G to 1536M in Makefile (176c086)
