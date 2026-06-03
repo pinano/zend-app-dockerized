@@ -836,7 +836,7 @@ size-l: _ensure_env
 	$(call set_env,DB_CPUS,3.0)
 	$(call set_env,DB_MEMORY,3G)
 	$(call set_env,DB_MEMORY_RESERVATION,512M)
-	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,1.5G)
+	$(call set_env,DB_INNODB_BUFFER_POOL_SIZE,1536M)
 	$(call set_env,DB_INNODB_BUFFER_POOL_INSTANCES,1)
 	$(call set_env,DB_INNODB_LOG_FILE_SIZE,256M)
 	$(call set_env,DB_MAX_CONNECTIONS,150)
