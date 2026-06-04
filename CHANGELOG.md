@@ -1,3 +1,8 @@
+## v2026.06.04 (2026-06-04)
+
+- feat: add script to detect and verify docker image version updates and integrate with Makefile and compose workflow (f70dbe0)
+- docs: update project title and simplify PHP version badges in README (7b18a7b)
+
 ## v2026.06.03.4 (2026-06-03)
 
 - chore: enable database warnings in docker-compose configuration (6617bec)
