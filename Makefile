@@ -12,6 +12,15 @@ PROJECT_ID     := $(if $(PROJECT_ID_RAW),$(PROJECT_ID_RAW),999)
 DB_PORT        := 33$(PROJECT_ID)
 SFTP_PORT      := 22$(PROJECT_ID)
 
+# Define Python interpreter (prioritizes virtual environment)
+ifneq (,$(wildcard .venv/bin/python3))
+    PYTHON := .venv/bin/python3
+else ifneq (,$(wildcard venv/bin/python3))
+    PYTHON := venv/bin/python3
+else
+    PYTHON := python3
+endif
+
 # Detect if 'help' is one of the goals, and there is at least one other goal.
 # E.g., 'make start help' or 'make help start'.
 SHOW_HELP :=
@@ -225,6 +234,11 @@ $(MAKECMDGOALS):
 				printf "$(BOLD)make rollback$(RESET)\n" ; \
 				printf "  Interactively list recent git tags and roll back codebase to the selected version.\n" ; \
 				;; \
+			"check-updates") \
+				printf "$(BOLD)make check-updates$(RESET)\n" ; \
+				printf "  Scan docker-compose files and query Docker registries (Docker Hub, GHCR, Quay) to check\n" ; \
+				printf "  for newer image versions matching the active flavors. Offers to auto-apply updates.\n" ; \
+				;; \
 			"redis-info") \
 				printf "$(BOLD)make redis-info$(RESET)\n" ; \
 				printf "  Retrieve and display statistics from the Valkey/Redis caching server.\n" ; \
@@ -310,6 +324,7 @@ help:
 	@printf "  $(CYAN)release$(RESET)       Generate a new CalVer release, update CHANGELOG.md, and create a git tag\n"
 	@printf "  $(CYAN)update$(RESET)        Fetch and safely upgrade the codebase (usage: make update [version=vX])\n"
 	@printf "  $(CYAN)rollback$(RESET)      Interactively list recent tag versions and rollback to a selected one\n"
+	@printf "  $(CYAN)check-updates$(RESET)   Check for Docker image updates in compose files\n"
 	@if docker compose config --services 2>/dev/null | grep -q 'redis'; then \
 		printf "\n$(BOLD)Redis Management$(RESET)\n"; \
 		printf "  $(CYAN)redis-info$(RESET)    Show Redis server statistics\n"; \
@@ -325,7 +340,27 @@ setup-index:
 
 .PHONY: init
 init:
-	@./docker/scripts/init-env.sh
+	@if [ ! -f .env ]; then \
+		chmod +x docker/scripts/init-env.sh; \
+		./docker/scripts/init-env.sh; \
+	else \
+		echo "ℹ️  .env already exists."; \
+	fi
+	@$(MAKE) --no-print-directory venv
+
+.PHONY: venv
+venv:
+	@if [ ! -d .venv ]; then \
+		echo "📦 Creating virtual environment (.venv)..."; \
+		python3 -m venv .venv 2>/dev/null || \
+		(echo "❌ Error: Failed to create virtual environment."; \
+		 echo "👉 Please install python3-venv (e.g. 'sudo apt install python3-venv' or similar)."; \
+		 exit 1); \
+	fi
+	@echo "⬇️  Installing/Updating Python dependencies..."
+	@.venv/bin/pip install -q pyyaml || \
+	(echo "⚠️  Warning: Failed to install pyyaml. Check your internet connection."; exit 1)
+	@echo "✅ Python environment ready."
 
 .PHONY: start
 start:
@@ -700,6 +735,10 @@ update:
 .PHONY: rollback
 rollback:
 	@./docker/scripts/rollback.sh
+
+.PHONY: check-updates
+check-updates:
+	@$(PYTHON) ./docker/scripts/check-image-updates.py
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
