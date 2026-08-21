@@ -1,3 +1,7 @@
+## v2026.08.21 (2026-08-21)
+
+- feat: add automatic Composer dependency installation and a Makefile helper for Composer commands (6c03b54)
+
 ## v2026.06.04 (2026-06-04)
 
 - feat: add script to detect and verify docker image version updates and integrate with Makefile and compose workflow (f70dbe0)
