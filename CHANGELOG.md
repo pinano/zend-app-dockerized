@@ -1,5 +1,6 @@
 ## v2026.08.21 (2026-08-21)
 
+- chore: configure persistent composer home directory with appropriate permissions for application containers (c1a584a)
 - feat: add automatic Composer dependency installation and a Makefile helper for Composer commands (6c03b54)
 
 ## v2026.06.04 (2026-06-04)

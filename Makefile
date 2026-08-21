@@ -587,9 +587,9 @@ opcache-clear: _ensure_env
 composer: _ensure_env
 	@ARGS="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$ARGS" ]; then \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data app composer list; \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data -e COMPOSER_HOME=/var/www/html/tmp/composer -e COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache app composer list; \
 	else \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data app composer $$ARGS; \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data -e COMPOSER_HOME=/var/www/html/tmp/composer -e COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache app composer $$ARGS; \
 	fi
 
 .PHONY: doctor

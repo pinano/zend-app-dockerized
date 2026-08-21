@@ -14,7 +14,9 @@ mkdir -p /var/www/html/tmp/cache \
          /var/www/html/tmp/cache_core_60 \
          /var/www/html/tmp/cache_forms \
          /var/www/html/tmp/cache_pages \
-         /var/www/html/tmp/sessions
+         /var/www/html/tmp/sessions \
+         /var/www/html/tmp/composer \
+         /var/www/html/tmp/composer/cache
 
 chown -R www-data:www-data /var/www/html/tmp
 chmod -R 775 /var/www/html/tmp
@@ -122,7 +124,7 @@ fi
 if [ -f "/var/www/html/composer.json" ]; then
     echo "📦 composer.json detected in docroot. Running composer install..."
     if command -v composer >/dev/null 2>&1; then
-        COMPOSER_ALLOW_SUPERUSER=1 composer install \
+        COMPOSER_HOME=/var/www/html/tmp/composer COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache COMPOSER_ALLOW_SUPERUSER=1 composer install \
             --working-dir=/var/www/html \
             --no-interaction \
             --prefer-dist \

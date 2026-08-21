@@ -34,8 +34,8 @@ services:
       TZ: ${TZ}
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
-      APP_ENV: ${APP_ENV:-development}
-      LOG_OUTPUT_LEVEL: ${LOG_OUTPUT_LEVEL:-warn}
+      COMPOSER_HOME: /var/www/html/tmp/composer
+      COMPOSER_CACHE_DIR: /var/www/html/tmp/composer/cache
       # Apache
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
       APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-300}
@@ -131,7 +131,8 @@ services:
       GROUP_ID: ${GROUP_ID}
       APP_ENV: ${APP_ENV:-development}
       LOG_OUTPUT_LEVEL: ${LOG_OUTPUT_LEVEL:-warn}
-      IS_CRON: 1
+      COMPOSER_HOME: /var/www/html/tmp/composer
+      COMPOSER_CACHE_DIR: /var/www/html/tmp/composer/cache
       # PHP
       PHP_DATE_TIMEZONE: ${TZ}
       PHP_DISPLAY_ERRORS: ${PHP_DISPLAY_ERRORS:-${APP_ENV_PHP_DISPLAY_ERRORS:-Off}}
