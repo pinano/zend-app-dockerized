@@ -54,7 +54,32 @@ Many legacy projects require shared external libraries (such as old versions of 
 
 ---
 
-## 4. Automation: Setup Entrypoint in One Command
+## 4. Modern Libraries via Composer
+
+If your project requires modern Composer packages (or you are gradually modernizing a legacy ZF1 app):
+
+1. Place your `composer.json` file inside `docroot/` (`docroot/composer.json`).
+2. Whenever the stack starts (`make start` or container boot), the container detects `composer.json` and automatically runs:
+   ```bash
+   composer install --prefer-dist --optimize-autoloader
+   ```
+3. The entrypoint template ([index.php.sample](file:///Users/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/index.php.sample)) automatically loads `vendor/autoload.php` if present:
+   ```php
+   $composerAutoload = ROOT_DIR . '/vendor/autoload.php';
+   if (file_exists($composerAutoload)) {
+       require_once $composerAutoload;
+   }
+   ```
+4. You can also run Composer commands on demand from your host without entering the container:
+   ```bash
+   make composer require <vendor/package>
+   make composer update
+   make composer dump-autoload
+   ```
+
+---
+
+## 5. Automation: Setup Entrypoint in One Command
 
 You can automatically generate/update the modern entrypoint structure using the following command:
 
@@ -65,5 +90,6 @@ make setup-index
 ### What does this command do?
 1. Creates the directory `docroot/public` if it does not exist.
 2. Scans `docroot/weblibs/` for directories and maps them to `/var/www/html/weblibs/` container paths. If a library contains a `Classes` subdirectory (e.g. `PHPExcel-1.7.5/Classes`), it automatically resolves to it.
-3. Automatically generates the `docroot/public/index.php` file using [index.php.sample](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/index.php.sample), injecting the detected include paths into the `$paths` array.
+3. Automatically generates the `docroot/public/index.php` file using [index.php.sample](file:///Users/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/index.php.sample), injecting the detected include paths into the `$paths` array.
 4. **Backup protection:** If `index.php` already exists, it automatically creates a `.bak` backup copy of the existing file before applying updates.
+

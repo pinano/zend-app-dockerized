@@ -27,8 +27,8 @@ A modernized Docker stack for running legacy Zend Framework 1.x applications, fe
 - **Tmpfs Integration**: High-performance, ephemeral storage for ZF1 cache/sessions.
 - **Secure by Default**: SFTP restricted to localhost, DB restricted to Docker bridge IP.
 - **Traefik Ready**: Integrated labels for Traefik reverse proxy.
-- **Advanced Flexibility**: Built-in support for Redis, Xdebug, Cronjobs, and custom PHP overrides.
-- **Unified Management**: Simple `Makefile` for all common operations.
+- **Advanced Flexibility**: Built-in support for Composer, Redis, Xdebug, Cronjobs, and custom PHP overrides.
+- **Composer Auto-Install**: Automatic dependency detection & installation on startup, plus `make composer` CLI helper.
 
 ## Quickstart
 
@@ -132,6 +132,7 @@ You can enable additional stack features for specific legacy applications via `.
 | `make pull` | Pull latest images |
 | `make clean` | Clean configs and volumes (requires confirmation) |
 | `make db` | Wait for MariaDB console, or use `import`/`export` |
+| `make composer <cmd>` | Run Composer commands inside the app container (e.g. `require`, `install`, `update`) |
 | `make config` | Validate Docker Compose config |
 | `make ctop` | Monitor containers using ctop |
 | `make open-ports` | Expose DB & SFTP ports externally (0.0.0.0) |

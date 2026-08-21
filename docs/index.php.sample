@@ -37,6 +37,12 @@ foreach ($dbVars as $var) {
     define($var, getenv_docker($var, 'unknown'));
 }
 
+// Composer autoloader
+$composerAutoload = ROOT_DIR . '/vendor/autoload.php';
+if (file_exists($composerAutoload)) {
+    require_once $composerAutoload;
+}
+
 /** Zend_Application */
 require_once 'Zend/Application.php';
 

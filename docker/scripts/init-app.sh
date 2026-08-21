@@ -116,3 +116,21 @@ php_admin_value[error_reporting] = $INT_VAL
 EOF
     echo "✅ PHP error reporting configured dynamically ($INT_VAL)."
 fi
+
+# --- COMPOSER AUTO-INSTALL ---
+# Automatically install dependencies if composer.json is present in docroot (/var/www/html)
+if [ -f "/var/www/html/composer.json" ]; then
+    echo "📦 composer.json detected in docroot. Running composer install..."
+    if command -v composer >/dev/null 2>&1; then
+        COMPOSER_ALLOW_SUPERUSER=1 composer install \
+            --working-dir=/var/www/html \
+            --no-interaction \
+            --prefer-dist \
+            --optimize-autoloader
+        chown -R www-data:www-data /var/www/html/vendor /var/www/html/composer.lock 2>/dev/null || true
+        echo "✅ Composer dependencies installed successfully."
+    else
+        echo "⚠️ Composer binary not found in container. Skipping composer install."
+    fi
+fi
+

@@ -259,6 +259,15 @@ $(MAKECMDGOALS):
 				printf "    2. Scan docroot/weblibs/ for libraries and update index.php's include paths.\n" ; \
 				printf "    3. Create backup file (.bak) of existing index.php configuration.\n" ; \
 				;; \
+			"composer") \
+				printf "$(BOLD)make composer [command]$(RESET)\n" ; \
+				printf "  Execute Composer commands inside the application container as www-data user.\n" ; \
+				printf "  Examples:\n" ; \
+				printf "    - make composer install\n" ; \
+				printf "    - make composer update\n" ; \
+				printf "    - make composer require <package>\n" ; \
+				printf "    - make composer dump-autoload\n" ; \
+				;; \
 			"help") \
 				printf "$(BOLD)make help$(RESET)\n" ; \
 				printf "  Show the general help menu listing all available targets.\n" ; \
@@ -300,6 +309,7 @@ help:
 	@printf "$(BOLD)Database & Tools$(RESET)\n"
 	@printf "  $(CYAN)db$(RESET)            DB Tools (console, import, export). Run 'make db', 'make db import <file>', 'make db export'\n"
 	@printf "  $(CYAN)db-root$(RESET)       Access database console as root user\n"
+	@printf "  $(CYAN)composer$(RESET)      Run Composer command in the container (e.g., make composer require <pkg>)\n"
 	@printf "  $(CYAN)opcache-clear$(RESET) Clear OPcache for PHP-FPM pool (zero-downtime flush)\n"
 	@printf "  $(CYAN)php-info$(RESET)      Show active PHP configuration in the container\n"
 	@printf "  $(CYAN)ctop$(RESET)          Monitor containers using ctop\n\n"
@@ -572,6 +582,15 @@ opcache-clear: _ensure_env
 	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > $${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php'
 	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app curl -s http://localhost:8080/opcache_reset_temp.php || echo "❌ Failed to query OPcache reset script"
 	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app rm -f $${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php
+
+.PHONY: composer
+composer: _ensure_env
+	@ARGS="$(filter-out $@,$(MAKECMDGOALS))"; \
+	if [ -z "$$ARGS" ]; then \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data app composer list; \
+	else \
+		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data app composer $$ARGS; \
+	fi
 
 .PHONY: doctor
 doctor: _ensure_env

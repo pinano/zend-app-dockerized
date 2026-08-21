@@ -27,6 +27,14 @@ COPY docker/scripts/init-app.sh /etc/entrypoint.d/99-init-app.sh
 RUN chmod +x /etc/entrypoint.d/99-init-app.sh
 # -----------------
 
+# --- COMPOSER & TOOLS ---
+# Install system packages required by Composer (git, unzip, zip) and copy Composer binary
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends git unzip zip && \
+    rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# ------------------------
+
 # Install required PHP extensions with root permissions
 RUN install-php-extensions exif imagick gd intl xdebug
 

@@ -12,12 +12,13 @@ ARG GROUP_ID
 # Switch to root to perform system-level configuration
 USER root
 
-# --- INSTALL CRON ---
-# The CLI image does not include cron, so we install it explicitly
+# --- INSTALL CRON & TOOLS ---
+# The CLI image does not include cron or composer tools, so we install them explicitly
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends cron && \
+    apt-get install -y --no-install-recommends cron git unzip zip && \
     rm -rf /var/lib/apt/lists/*
-# -----------------
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# ----------------------------
 
 # --- USER SYNC ---
 # 1. Update www-data UID and GID to match the host user (e.g., 1002)
