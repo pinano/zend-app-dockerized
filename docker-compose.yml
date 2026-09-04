@@ -169,7 +169,7 @@ services:
 
   # --- MariaDB ---
   db:
-    image: mariadb:12.3.2
+    image: mariadb:12.3.3
     container_name: ${PROJECT_NAME}-db
     command:
       # sql_mode: STRICT_TRANS_TABLES intentionally omitted for legacy ZF1 compatibility.
@@ -250,7 +250,7 @@ services:
 
   # --- Optional Redis Cache (Powered by Valkey, requires COMPOSE_PROFILES=redis) ---
   redis:
-    image: valkey/valkey:9.1.0-alpine
+    image: valkey/valkey:9.1.2-alpine3.24
     container_name: ${PROJECT_NAME}-redis
     profiles: [ "redis" ]
     command: valkey-server --maxmemory 128mb --maxmemory-policy allkeys-lru
