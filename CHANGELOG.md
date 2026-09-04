@@ -1,3 +1,7 @@
+## v2026.09.04 (2026-09-04)
+
+- refactor: improve environment sync scripts, validate project IDs, and enhance image parsing reliability (947f0d6)
+
 ## v2026.08.21 (2026-08-21)
 
 - chore: configure persistent composer home directory with appropriate permissions for application containers (c1a584a)
