@@ -38,9 +38,7 @@ ENV COMPOSER_HOME=/var/www/html/tmp/composer \
 # ------------------------
 
 # Install required PHP extensions with root permissions
-# Includes database adapters (mysqli, pdo_mysql), imaging (gd, imagick, exif),
-# localization (intl), cache/debugging (redis, xdebug), and utilities (zip, bcmath, soap)
-RUN install-php-extensions exif imagick gd intl xdebug redis mysqli pdo_mysql zip bcmath soap
+RUN install-php-extensions exif imagick gd intl xdebug redis
 
 # IMPORTANT: We do NOT use "USER www-data" here.
 # Leaving the user as root allows the entrypoint script to configure Apache modules
