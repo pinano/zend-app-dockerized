@@ -2,7 +2,7 @@ services:
 
   # --- App ---
   app:
-    image: ${PROJECT_NAME}-app:${PHP_VERSION:-7.4}-fpm-apache
+    image: ${PROJECT_NAME}-app:${PHP_VERSION:-8.5}-fpm-apache
     container_name: ${PROJECT_NAME}-app
     deploy:
       resources:
@@ -18,7 +18,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
       args:
-        - PHP_VERSION=${PHP_VERSION:-7.4}
+        - PHP_VERSION=${PHP_VERSION:-8.5}
         - USER_ID=${USER_ID:-1000}
         - GROUP_ID=${GROUP_ID:-1000}
     volumes:
@@ -73,9 +73,13 @@ services:
       PHP_FPM_SLOWLOG_TIMEOUT: ${PHP_FPM_SLOWLOG_TIMEOUT:-10s}
       # Database
       DB_HOST: db
+      DB_PORT: ${DB_CONTAINER_PORT:-3306}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
+      # Redis (optional cache)
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     healthcheck:
       test: [ "CMD-SHELL", "curl -sf --max-time 5 --connect-timeout 2 http://localhost:8080/healthcheck.php -o /dev/null || exit 1" ]
       interval: ${HEALTHCHECK_INTERVAL:-60s}
@@ -98,7 +102,7 @@ services:
 
   # --- Cron ---
   cron:
-    image: ${PROJECT_NAME}-cron:${PHP_VERSION:-7.4}-cli
+    image: ${PROJECT_NAME}-cron:${PHP_VERSION:-8.5}-cli
     container_name: ${PROJECT_NAME}-cron
     profiles: [ "cron" ]
     deploy:
@@ -115,13 +119,14 @@ services:
       context: .
       dockerfile: docker/Dockerfile.cron
       args:
-        - PHP_VERSION=${PHP_VERSION:-7.4}
+        - PHP_VERSION=${PHP_VERSION:-8.5}
         - USER_ID=${USER_ID:-1000}
         - GROUP_ID=${GROUP_ID:-1000}
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
-      - ./docker/scripts/crontab:/etc/cron.d/app-cron
+      - ./docker/scripts/crontab:/etc/crontab.template:ro
+      - ./docker/scripts/maintenance.sh:/usr/local/bin/maintenance.sh:ro
       - ./docroot:/var/www/html
       - app_tmp:/var/www/html/tmp
     environment:
@@ -146,13 +151,18 @@ services:
       PHP_XDEBUG_MODE: ${PHP_XDEBUG_MODE:-off}
       # Database
       DB_HOST: db
+      DB_PORT: ${DB_CONTAINER_PORT:-3306}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
-    # 1. Dump Docker env vars to /etc/environment so cron jobs can access all custom variables.
-    #    (The vanilla cron daemon strips all inherited environment variables.)
-    # 2. Fix permissions for cron.d files (must be owned by root and 644) before starting cron.
-    command: sh -c "printenv | grep -v -E '^(PATH|HOME|HOSTNAME|PWD|SHLVL|OLDPWD)=' > /etc/environment && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
+      # Redis (optional cache)
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+    # 1. Dump Docker env vars to /etc/environment AND prepend directly into /etc/cron.d/app-cron.
+    #    This ensures all cron tasks (under www-data) have full access to environment variables.
+    # 2. Creates /etc/cron.d/app-cron from read-only host template, completely preventing
+    #    host-editor file permission and ownership collisions ("WRONG FILE OWNER").
+    command: sh -c "printenv | grep -v -E '^(PATH|HOME|HOSTNAME|PWD|SHLVL|OLDPWD)=' > /etc/environment && (cat /etc/environment; echo ''; cat /etc/crontab.template; echo '') > /etc/cron.d/app-cron && chown root:root /etc/cron.d/app-cron && chmod 644 /etc/cron.d/app-cron && cron -f"
     restart: unless-stopped
     networks:
       - backnet
@@ -172,7 +182,6 @@ services:
       - --innodb-buffer-pool-instances=${DB_INNODB_BUFFER_POOL_INSTANCES:-1}
       - --innodb-log-file-size=${DB_INNODB_LOG_FILE_SIZE:-32M}
       - --innodb-flush-log-at-trx-commit=${DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT:-2}
-      - --innodb-flush-method=O_DIRECT
       - --skip-name-resolve
       - --table-open-cache=${DB_TABLE_OPEN_CACHE:-2000}
       - --table-definition-cache=${DB_TABLE_DEFINITION_CACHE:-1400}

@@ -345,11 +345,11 @@ help:
 
 .PHONY: setup-index
 setup-index:
-	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required to run the configuration tool."; exit 1)
-	@python3 docker/scripts/setup-index.py
+	@$(PYTHON) docker/scripts/setup-index.py
 
 .PHONY: init
 init:
+	@mkdir -p docroot/public docroot/weblibs docroot/application
 	@if [ ! -f .env ]; then \
 		chmod +x docker/scripts/init-env.sh; \
 		./docker/scripts/init-env.sh; \
@@ -374,6 +374,7 @@ venv:
 
 .PHONY: start
 start:
+	@mkdir -p docroot/public docroot/weblibs docroot/application
 	@if [ ! -f .env ]; then \
 		$(MAKE) --no-print-directory init || exit 1; \
 	else \
@@ -384,6 +385,7 @@ start:
 	if [ -n "$$PROJ_NAME" ]; then \
 		docker volume rm $${PROJ_NAME}_app_tmp >/dev/null 2>&1 || true; \
 	fi
+	@docker network inspect traefik >/dev/null 2>&1 || docker network create traefik >/dev/null 2>&1 || true
 	@echo "🐳 Starting containers..."
 	@. ./docker/scripts/set-env-vars.sh && docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
@@ -393,19 +395,30 @@ validate:
 	@echo "Validating .env configuration..."
 	@[ -n "$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1)
-	@[ -n "$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1)" ] || \
-		(echo "❌ ERROR: PROJECT_ID is not set!"; exit 1)
+	@PID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
+	if [ -z "$$PID" ]; then \
+		echo "❌ ERROR: PROJECT_ID is not set!"; exit 1; \
+	fi; \
+	case "$$PID" in \
+		*[!0-9]*) echo "❌ ERROR: PROJECT_ID must be a numeric integer!"; exit 1 ;; \
+	esac; \
+	if [ "$$PID" -gt 999 ] || [ "33$$PID" -gt 65535 ]; then \
+		echo "❌ ERROR: PROJECT_ID ($$PID) produces an invalid TCP port (> 65535). Use a 1-3 digit ID (e.g., 001 - 999)."; exit 1; \
+	fi; \
+	if [ "33$$PID" -lt 1024 ]; then \
+		echo "⚠️  WARNING: PROJECT_ID ($$PID) produces privileged host TCP ports (< 1024: DB=33$$PID, SFTP=22$$PID). Consider using 3 digits (e.g. 00$$PID) for high ports (3300$$PID / 2200$$PID)."; \
+	fi
 	@[ -n "$$(grep '^DB_NAME=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: DB_NAME is not set!"; exit 1)
 	@[ -n "$$(grep '^DB_USER=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: DB_USER is not set!"; exit 1)
 	@[ -n "$$(grep '^DB_PASS=' .env | cut -d= -f2 | head -1)" ] || \
 		(echo "❌ ERROR: DB_PASS is not set!"; exit 1)
-	@[ "$$(grep '^USER_ID=' .env | cut -d= -f2 | head -1)" != "0" ] && \
-		[ -n "$$(grep '^USER_ID=' .env | cut -d= -f2 | head -1)" ] || \
+	@UID_VAL=$$(grep '^USER_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
+	[ "$$UID_VAL" != "0" ] && [ -n "$$UID_VAL" ] || \
 		(echo "❌ ERROR: USER_ID must be set and non-zero!"; exit 1)
-	@[ "$$(grep '^GROUP_ID=' .env | cut -d= -f2 | head -1)" != "0" ] && \
-		[ -n "$$(grep '^GROUP_ID=' .env | cut -d= -f2 | head -1)" ] || \
+	@GID_VAL=$$(grep '^GROUP_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
+	[ "$$GID_VAL" != "0" ] && [ -n "$$GID_VAL" ] || \
 		(echo "❌ ERROR: GROUP_ID must be set and non-zero!"; exit 1)
 	@grep -q "^DB_PASS=dbrootpass" .env && \
 		echo "⚠️  WARNING: DB_PASS is using default password!" || true
@@ -459,10 +472,9 @@ services: _ensure_env
 .PHONY: sync
 sync: _ensure_env
 	@echo "🔄 Synchronizing .env with .env.dist..."
-	@command -v python3 >/dev/null 2>&1 || (echo "❌ python3 is required for 'make sync'. Install it with: apt install python3 / brew install python3"; exit 1)
-	@python3 docker/scripts/sync-env.py
+	@$(PYTHON) docker/scripts/sync-env.py
 
-.PHONY: logs logs-apache logs-php logs-zend
+.PHONY: logs logs-apache logs-php logs-zend logs-slow
 logs: _ensure_env
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	. ./docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE
@@ -487,7 +499,7 @@ logs-slow: _ensure_env
 shell: _ensure_env
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$SERVICE" ]; then SERVICE="app"; fi; \
-	. ./docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/bash 2>/dev/null || . ./docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE /bin/sh
+	. ./docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE sh -c 'if command -v bash >/dev/null 2>&1; then exec bash; else exec sh; fi'
 
 .PHONY: pull
 pull: _ensure_env
@@ -496,12 +508,15 @@ pull: _ensure_env
 .PHONY: clean
 clean: _ensure_env
 	@printf "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Are you sure? [y/N] " && read ans && \
-	if [ $${ans:-N} = y ]; then \
-		. ./docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
-		echo "🧹 Clean complete."; \
-	else \
-		echo "Aborting clean."; \
-	fi
+	case "$$ans" in \
+		[yY]|[yY][eE][sS]) \
+			. ./docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
+			echo "🧹 Clean complete."; \
+			;; \
+		*) \
+			echo "Aborting clean."; \
+			;; \
+	esac
 
 .PHONY: config
 config: _ensure_env
@@ -517,7 +532,7 @@ db: _ensure_env
 	if [ "$$ACTION" = "import" ]; then \
 		FILE="$(word 3,$(MAKECMDGOALS))"; \
 		if [ -z "$$FILE" ]; then \
-			echo "❌ ERROR: Please specify a file to import (e.g., make db import file.sql)"; \
+			echo "❌ ERROR: Please specify a file to import (e.g., make db import file.sql or file.sql.gz)"; \
 			exit 1; \
 		fi; \
 		if [ ! -f "$$FILE" ]; then \
@@ -525,12 +540,23 @@ db: _ensure_env
 			exit 1; \
 		fi; \
 		echo "📄 Importing $$FILE into database..."; \
-		if command -v pv >/dev/null 2>&1; then \
-			. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
-		else \
-			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
-		fi; \
+		set -eo pipefail; \
+		case "$$FILE" in \
+			*.gz) \
+				if command -v pv >/dev/null 2>&1; then \
+					. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+				else \
+					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
+					. ./docker/scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+				fi ;; \
+			*) \
+				if command -v pv >/dev/null 2>&1; then \
+					. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+				else \
+					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
+					. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
+				fi ;; \
+		esac; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
 		PROJECT_ID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
@@ -538,11 +564,17 @@ db: _ensure_env
 		TIMESTAMP=$$(date +%Y%m%d_%H%M%S); \
 		FILENAME="$${PROJECT_ID}-$${PROJECT_NAME}-$${TIMESTAMP}.sql"; \
 		echo "📤 Exporting database to $$FILENAME..."; \
+		set -eo pipefail; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
+			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
+		fi; \
+		if [ ! -s "$$FILENAME" ]; then \
+			rm -f "$$FILENAME"; \
+			echo "❌ ERROR: Database export failed or resulted in an empty file!"; \
+			exit 1; \
 		fi; \
 		echo "✅ Export complete! Saved to $$FILENAME"; \
 	elif [ -n "$$ACTION" ]; then \
@@ -571,17 +603,17 @@ ctop:
 php-info: _ensure_env
 	@echo "🔍 Active PHP/FPM Configuration (via HTTP request to the running pool):"
 	@. ./docker/scripts/set-env-vars.sh && \
-		DOC_ROOT=$$(docker compose exec -T app printenv APACHE_DOCUMENT_ROOT 2>/dev/null || echo "/var/www/html/public") && \
-		docker compose exec -T app sh -c "echo '<?php echo \"date.timezone=\" . ini_get(\"date.timezone\") . \"\\n\"; echo \"error_log=\" . ini_get(\"error_log\") . \"\\n\"; echo \"error_reporting=\" . ini_get(\"error_reporting\") . \"\\n\"; echo \"display_errors=\" . ini_get(\"display_errors\") . \"\\n\"; echo \"log_errors=\" . ini_get(\"log_errors\") . \"\\n\"; echo \"max_input_vars=\" . ini_get(\"max_input_vars\") . \"\\n\"; echo \"memory_limit=\" . ini_get(\"memory_limit\") . \"\\n\"; echo \"realpath_cache_size=\" . ini_get(\"realpath_cache_size\") . \"\\n\"; echo \"opcache.enable=\" . ini_get(\"opcache.enable\") . \"\\n\"; echo \"opcache.memory_consumption=\" . ini_get(\"opcache.memory_consumption\") . \"\\n\"; echo \"opcache.interned_strings_buffer=\" . ini_get(\"opcache.interned_strings_buffer\") . \"\\n\"; echo \"opcache.validate_timestamps=\" . ini_get(\"opcache.validate_timestamps\") . \"\\n\"; echo \"opcache.revalidate_freq=\" . ini_get(\"opcache.revalidate_freq\") . \"\\n\";' > $$DOC_ROOT/phpinfo_temp.php" && \
-		docker compose exec -T app curl -sf http://localhost:8080/phpinfo_temp.php && \
-		docker compose exec -T app rm -f $$DOC_ROOT/phpinfo_temp.php
+		DOC_ROOT=$$(docker compose exec -T app printenv APACHE_DOCUMENT_ROOT 2>/dev/null | tr -d '\r' || echo "/var/www/html/public") && \
+		docker compose exec -T app sh -c "echo '<?php echo \"date.timezone=\" . ini_get(\"date.timezone\") . \"\\n\"; echo \"error_log=\" . ini_get(\"error_log\") . \"\\n\"; echo \"error_reporting=\" . ini_get(\"error_reporting\") . \"\\n\"; echo \"display_errors=\" . ini_get(\"display_errors\") . \"\\n\"; echo \"log_errors=\" . ini_get(\"log_errors\") . \"\\n\"; echo \"max_input_vars=\" . ini_get(\"max_input_vars\") . \"\\n\"; echo \"memory_limit=\" . ini_get(\"memory_limit\") . \"\\n\"; echo \"realpath_cache_size=\" . ini_get(\"realpath_cache_size\") . \"\\n\"; echo \"opcache.enable=\" . ini_get(\"opcache.enable\") . \"\\n\"; echo \"opcache.memory_consumption=\" . ini_get(\"opcache.memory_consumption\") . \"\\n\"; echo \"opcache.interned_strings_buffer=\" . ini_get(\"opcache.interned_strings_buffer\") . \"\\n\"; echo \"opcache.validate_timestamps=\" . ini_get(\"opcache.validate_timestamps\") . \"\\n\"; echo \"opcache.revalidate_freq=\" . ini_get(\"opcache.revalidate_freq\") . \"\\n\"; echo \"extension.redis=\" . (extension_loaded(\"redis\") ? \"loaded\" : \"NOT loaded\") . \"\\n\";' > \"$$DOC_ROOT/phpinfo_temp.php\"" && \
+		(docker compose exec -T app curl -sf http://localhost:8080/phpinfo_temp.php || echo "❌ Failed to query phpinfo script"); \
+		docker compose exec -T app rm -f "$$DOC_ROOT/phpinfo_temp.php"
 
 .PHONY: opcache-clear
 opcache-clear: _ensure_env
 	@echo "🧹 Clearing OPcache (PHP-FPM)..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > $${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php'
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > "$${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php"'
 	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app curl -s http://localhost:8080/opcache_reset_temp.php || echo "❌ Failed to query OPcache reset script"
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app rm -f $${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php
+	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app rm -f "$${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php"
 
 .PHONY: composer
 composer: _ensure_env
@@ -597,6 +629,11 @@ doctor: _ensure_env
 	@echo "🩺 Running diagnostic checks..."
 	@echo "─────────────────────────────────"
 	@docker info >/dev/null 2>&1 && echo "✅ Docker daemon is running" || echo "❌ Docker daemon is NOT running or accessible"
+	@if docker network inspect traefik >/dev/null 2>&1; then \
+		echo "✅ External Traefik network exists"; \
+	else \
+		echo "ℹ️  External Traefik network: Not created yet (will be created automatically on 'make start')"; \
+	fi
 	@if [ -f /sys/kernel/mm/transparent_hugepage/enabled ]; then \
 		THP_STATUS=$$(cat /sys/kernel/mm/transparent_hugepage/enabled | grep -o '\[.*\]' | tr -d '[]'); \
 		echo "ℹ️  Host Transparent Huge Pages: $$THP_STATUS"; \
@@ -619,12 +656,15 @@ doctor: _ensure_env
 	SFTP_OWNED=0; \
 	if [ -n "$$DB_CID" ] && docker port "$$DB_CID" 2>/dev/null | grep -q ":$$DB_PORT"; then DB_OWNED=1; fi; \
 	if [ -n "$$SFTP_CID" ] && docker port "$$SFTP_CID" 2>/dev/null | grep -q ":$$SFTP_PORT"; then SFTP_OWNED=1; fi; \
-	if command -v ss >/dev/null 2>&1; then \
-		DB_PORT_IN_USE=$$(ss -tln | grep -q ":$$DB_PORT " && echo 1 || echo 0); \
-		SFTP_PORT_IN_USE=$$(ss -tln | grep -q ":$$SFTP_PORT " && echo 1 || echo 0); \
+	if command -v lsof >/dev/null 2>&1; then \
+		DB_PORT_IN_USE=$$(lsof -nP -iTCP:$$DB_PORT -sTCP:LISTEN >/dev/null 2>&1 && echo 1 || echo 0); \
+		SFTP_PORT_IN_USE=$$(lsof -nP -iTCP:$$SFTP_PORT -sTCP:LISTEN >/dev/null 2>&1 && echo 1 || echo 0); \
+	elif command -v ss >/dev/null 2>&1; then \
+		DB_PORT_IN_USE=$$(ss -tln | grep -qE "(:|\.)$$DB_PORT " && echo 1 || echo 0); \
+		SFTP_PORT_IN_USE=$$(ss -tln | grep -qE "(:|\.)$$SFTP_PORT " && echo 1 || echo 0); \
 	elif command -v netstat >/dev/null 2>&1; then \
-		DB_PORT_IN_USE=$$(netstat -tln | grep -q ":$$DB_PORT " && echo 1 || echo 0); \
-		SFTP_PORT_IN_USE=$$(netstat -tln | grep -q ":$$SFTP_PORT " && echo 1 || echo 0); \
+		DB_PORT_IN_USE=$$(netstat -tln 2>/dev/null | grep -qE "(:|\.)$$DB_PORT " && echo 1 || echo 0); \
+		SFTP_PORT_IN_USE=$$(netstat -tln 2>/dev/null | grep -qE "(:|\.)$$SFTP_PORT " && echo 1 || echo 0); \
 	else \
 		DB_PORT_IN_USE=0; \
 		SFTP_PORT_IN_USE=0; \
@@ -1017,8 +1057,13 @@ size-show: _ensure_env
 crontab-init:
 	@if [ ! -f docker/scripts/crontab ]; then \
 		mkdir -p docker/scripts; \
-		echo "# m h dom mon dow user  command" > docker/scripts/crontab; \
+		echo "# -----------------------------------------" > docker/scripts/crontab; \
+		echo "# Application Scheduled Tasks (Cronjobs)" >> docker/scripts/crontab; \
+		echo "# -----------------------------------------" >> docker/scripts/crontab; \
+		echo "# minute hour day month weekday USERNAME command" >> docker/scripts/crontab; \
 		echo "# * * * * * www-data php /var/www/html/scripts/cron.php" >> docker/scripts/crontab; \
+		echo "*/15 * * * * root /usr/local/bin/maintenance.sh > /proc/1/fd/1 2>&1" >> docker/scripts/crontab; \
+		echo "" >> docker/scripts/crontab; \
 		echo "✅ Created example crontab at docker/scripts/crontab"; \
 	else \
 		echo "ℹ️  crontab file already exists."; \

@@ -22,3 +22,8 @@ docroot/
 .DS_Store
 *.swp
 *~
+
+# Python cache & local backups
+__pycache__/
+*.py[cod]
+backups/

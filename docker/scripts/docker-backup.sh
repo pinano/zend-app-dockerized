@@ -112,6 +112,7 @@ TELEGRAM_BOT_TOKEN="${TELEGRAM_BOT_TOKEN:-}"
 TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID:-}"
 
 CANARY_FILE="${CANARY_FILE:-}"
+CHECK_MOUNTPOINT="${CHECK_MOUNTPOINT:-true}"
 LOCK_FILE="${LOCK_FILE:-/tmp/docker-backup.lock}"
 TEMP_DIR="${TEMP_DIR:-/tmp}"
 DB_TIMEOUT="${DB_TIMEOUT:-1h}"
@@ -166,11 +167,13 @@ fi
 
 # --- Mount & Canary Failsafe Verification ---
 # 1. Verify BACKUP_ROOT_DIR is indeed a mount point (checks LXC mp0 mount is active)
-if ! mountpoint -q "$BACKUP_ROOT_DIR"; then
-    log_error "Backup root directory is not a mount point: ${BACKUP_ROOT_DIR}"
-    log_error "LXC mount (mp0) might be inactive. Aborting backup to prevent local disk filling up."
-    send_telegram_message "⚠️ <b>[${PROXMOX_HOST}/${MY_HOSTNAME}] Backup Aborted!</b>\n\nError: Backup root directory <code>${BACKUP_ROOT_DIR}</code> is not a mount point. Check LXC bind-mount (mp0)."
-    exit 1
+if [[ "${CHECK_MOUNTPOINT}" == "true" ]]; then
+    if ! mountpoint -q "$BACKUP_ROOT_DIR"; then
+        log_error "Backup root directory is not a mount point: ${BACKUP_ROOT_DIR}"
+        log_error "LXC mount (mp0) might be inactive. Aborting backup to prevent local disk filling up."
+        send_telegram_message "⚠️ <b>[${PROXMOX_HOST}/${MY_HOSTNAME}] Backup Aborted!</b>\n\nError: Backup root directory <code>${BACKUP_ROOT_DIR}</code> is not a mount point. Check LXC bind-mount (mp0)."
+        exit 1
+    fi
 fi
 
 # 2. Verify Canary File (checks Host own Dropbox mount is active)
@@ -182,7 +185,7 @@ if [[ -n "$CANARY_FILE" && ! -f "$CANARY_FILE" ]]; then
 fi
 
 log_info "Target Directory: ${TARGET_DIR}"
-mkdir -p "$PROJECT_TARGET_DIR" "$DB_TARGET_DIR" "$METADATA_DIR"
+mkdir -p "$PROJECT_TARGET_DIR" "$DB_TARGET_DIR" "$METADATA_DIR" "$TEMP_DIR"
 
 # --- Telegram/Error Tracking ---
 BACKUP_REPORT=""
@@ -194,7 +197,7 @@ parse_env_var() {
     local file="$1"
     local key="$2"
     if [[ -f "$file" ]]; then
-        (grep -E "^[[:space:]]*${key}=" "$file" || true) | head -n 1 | cut -d'=' -f2- | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^["\x27]//' -e 's/["\x27]$//'
+        (grep -E "^[[:space:]]*(export[[:space:]]+)?${key}=" "$file" || true) | head -n 1 | cut -d'=' -f2- | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e "s/^['\"]//" -e "s/['\"]$//"
     fi
 }
 
@@ -238,9 +241,13 @@ process_project_backup() {
     # 2. Project Files Backup (Incremental / tar --listed-incremental)
     # Monthly snar filename creates a natural FULL backup on the 1st of the month
     local snar_file="${METADATA_DIR}/${backup_prefix}-$(date +%Y-%m).snar"
+    local snar_tmp="${snar_file}.tmp"
     local backup_type="incr"
     if [[ ! -f "$snar_file" ]]; then
         backup_type="full"
+        rm -f "$snar_tmp"
+    else
+        cp -f "$snar_file" "$snar_tmp"
     fi
 
     local timestamp
@@ -270,7 +277,7 @@ process_project_backup() {
     local tar_rc=0
     # Temporarily disable exit on error to capture tar exit status (0=success, 1=warnings, 2=fatal)
     set +e
-    timeout "$TAR_TIMEOUT" tar -czg "$snar_file" \
+    timeout "$TAR_TIMEOUT" tar -czg "$snar_tmp" \
         "${exclude_args[@]}" \
         -f "$project_backup_file" \
         -C "$(dirname "$project_dir")" \
@@ -279,12 +286,14 @@ process_project_backup() {
     set -e
 
     if [[ "$tar_rc" -eq 0 || "$tar_rc" -eq 1 ]]; then
+        mv -f "$snar_tmp" "$snar_file"
         if [[ "$tar_rc" -eq 1 ]]; then
             log_warn "Project files backup completed with warnings (some files changed during read) for ${project_name}."
         else
             log_info "Project files backup completed successfully: $(basename "$project_backup_file")"
         fi
     else
+        rm -f "$snar_tmp" "$project_backup_file"
         log_error "Failed to create project files backup for ${project_name}! (tar exit code: ${tar_rc})"
         proj_status="🔴"
         HAS_ERRORS=1
@@ -319,8 +328,8 @@ process_project_backup() {
     else
         log_info "Creating full database dump..."
         
-        # Define SQL and target backup file paths in host metadata directory (avoiding RAM-backed tmpfs)
-        local temp_sql_file="${METADATA_DIR}/${backup_prefix}-db-${timestamp}.sql"
+        # Define SQL and target backup file paths in TEMP_DIR (configurable in docker-backup.conf)
+        local temp_sql_file="${TEMP_DIR}/${backup_prefix}-db-${timestamp}.sql"
         local db_backup_file="${DB_TARGET_DIR}/${backup_prefix}-db-${timestamp}.tar.gz"
 
         # Check dump command availability inside the container (mariadb-dump vs mysqldump)
@@ -338,35 +347,47 @@ process_project_backup() {
             -u "$db_user" \
             "$db_name" \
             | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' \
-            > "$temp_sql_file"; then
+            > "$temp_sql_file" && [ -s "$temp_sql_file" ]; then
             
             # Compress the dump SQL file into a tar.gz package
-            if tar -czf "$db_backup_file" -C "$METADATA_DIR" "$(basename "$temp_sql_file")"; then
+            if tar -czf "$db_backup_file" -C "$TEMP_DIR" "$(basename "$temp_sql_file")"; then
                 log_info "Database backup completed successfully: $(basename "$db_backup_file")"
                 db_status="🟢"
             else
+                rm -f "$db_backup_file"
                 log_error "Failed to compress database SQL file!"
                 db_status="🔴 (Compress)"
                 HAS_ERRORS=1
             fi
         else
-            log_error "Failed to dump database from container ${db_container} for project ${project_name}!"
+            log_error "Failed to dump database from container ${db_container} for project ${project_name} (dump failed or produced empty file)!"
             db_status="🔴 (Dump)"
             HAS_ERRORS=1
         fi
         
-        # Clean up temporary SQL file from host metadata directory
+        # Clean up temporary SQL file from TEMP_DIR
         rm -f "$temp_sql_file"
     fi
 
     # 4. Enforce Retention (Keep last RETENTION_DAYS backups, i.e., delete on day RETENTION_DAYS+1)
     # Using -mtime +$((RETENTION_DAYS - 1)) deletes files older than RETENTION_DAYS days.
     # E.g. with RETENTION_DAYS=7, files modified 7 or more days ago are deleted, preserving 7 days of copies.
+    # We only delete old files if today's backup succeeded, preventing total backup loss during prolonged outages.
     local mtime_val=$((RETENTION_DAYS - 1))
     
-    log_info "Enforcing retention policy (${RETENTION_DAYS} days) for ${project_name}..."
-    find "$PROJECT_TARGET_DIR" -type f -name "${backup_prefix}-files-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
-    find "$DB_TARGET_DIR" -type f -name "${backup_prefix}-db-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
+    if [[ "$tar_rc" -eq 0 || "$tar_rc" -eq 1 ]]; then
+        log_info "Enforcing files retention policy (${RETENTION_DAYS} days) for ${project_name}..."
+        find "$PROJECT_TARGET_DIR" -type f -name "${backup_prefix}-files-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
+    else
+        log_warn "Skipping files retention purge for ${project_name} because today's files backup failed."
+    fi
+
+    if [[ "$db_status" == "🟢" ]]; then
+        log_info "Enforcing database retention policy (${RETENTION_DAYS} days) for ${project_name}..."
+        find "$DB_TARGET_DIR" -type f -name "${backup_prefix}-db-*.tar.gz" -mtime +"${mtime_val}" -delete 2>/dev/null || true
+    else
+        log_warn "Skipping database retention purge for ${project_name} because today's DB backup was not successful."
+    fi
 
     # Append status line to the Telegram report
     local fmt_line
@@ -426,5 +447,11 @@ if [[ -n "$TELEGRAM_BOT_TOKEN" && -n "$TELEGRAM_CHAT_ID" ]]; then
 fi
 
 log_info "========================================================"
-log_info "Backup process completed successfully in $(format_duration $(( $(date +%s) - START_TIME )))!"
-log_info "========================================================"
+if [[ "$HAS_ERRORS" -eq 1 ]]; then
+    log_warn "Backup process finished with ERRORS in $(format_duration $(( $(date +%s) - START_TIME )))!"
+    log_info "========================================================"
+    exit 1
+else
+    log_info "Backup process completed successfully in $(format_duration $(( $(date +%s) - START_TIME )))!"
+    log_info "========================================================"
+fi

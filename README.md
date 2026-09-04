@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" /></a>
   <img src="https://img.shields.io/badge/PHP-5.x%20|%207.x%20|%208.x-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP Versions" />
   <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/MariaDB-003545?style=for-the-badge&logo=mariadb&logoColor=white" alt="MariaDB" />
@@ -21,7 +21,8 @@
 A modernized Docker stack for running legacy Zend Framework 1.x applications, featuring optimized performance, secure defaults, and easy management via `make`.
 
 ## Features
-- **Configurable PHP Version**: Switch between PHP versions (e.g., 5.6, 7.4, 8.1) via `.env`.
+
+- **Configurable PHP Version**: Switch between PHP versions (e.g., 5.6, 7.4, 8.5) via `.env`.
 - **MariaDB 12**: Latest stable database version.
 - **Performance Tuned**: Optimized `opcache` and `realpath_cache` settings for ZF1.
 - **Tmpfs Integration**: High-performance, ephemeral storage for ZF1 cache/sessions.
@@ -32,30 +33,35 @@ A modernized Docker stack for running legacy Zend Framework 1.x applications, fe
 
 ## Quickstart
 
-1.  **Start the Stack**
+1. **Start the Stack**
+
     ```bash
     make start
     ```
+
     This will automatically copy `.env.dist` to `.env` if it doesn't exist and start the containers.
 
-2.  **Access the Application**
+2. **Access the Application**
     The application is configured to run behind Traefik (a reverse proxy).
-    
+
     **If you have Traefik running on your host:**
     1. Ensure Traefik has an external Docker network named `traefik`.
     2. Access the app via your configured domain (e.g., `http://app-project.localhost`).
-    
+
     **If you DON'T have Traefik:**
     1. Comment out the `traefik` network block in `docker-compose.yml`.
     2. Map the app's port explicitly (`ports: ["8080:8080"]`).
     3. Access the app via: `http://127.0.0.1:8080`.
 
-3.  **Database Access**
+3. **Database Access**
     Connect specifically to the MariaDB console:
+
     ```bash
     make db
     ```
+
     You can also import and export database snapshots easily:
+
     ```bash
     make db export
     make db import <file.sql>
@@ -67,7 +73,7 @@ Configuration is managed via the `.env` file. Key variables include:
 
 - `PROJECT_NAME`: Used for container naming and network isolation.
 - `APP_ENV`: Application environment (`production` or `development`). **[Read the APP_ENV Guide here](docs/app_env.md).**
-- `PHP_VERSION`: The PHP version tag for `serversideup/php` (e.g., `7.4`).
+- `PHP_VERSION`: The PHP version tag for `serversideup/php` (e.g., `8.5`).
 - `APACHE_DOCUMENT_ROOT`: Path to the public web root (default: `/var/www/html/public`).
 - `DB_*`: Database credentials and settings.
 - `SFTP_*`: SFTP user credentials.
@@ -80,7 +86,7 @@ The stack is designed to scale from small low-traffic sites to large application
 - **PHP Performance**: Configure OPcache (`PHP_OPCACHE_MEMORY_CONSUMPTION`, `PHP_OPCACHE_MAX_ACCELERATED_FILES`), input vars (`PHP_MAX_INPUT_VARS`), and FPM pool tuning (`PHP_FPM_PM_MAX_CHILDREN`, `PHP_FPM_PM_MAX_REQUESTS`) for faster and more stable execution.
 - **Database Resources**: Assign CPU and memory limits to MariaDB (`DB_CPUS`, `DB_MEMORY`).
 - **Database Tuning**: For high traffic, increase `DB_MAX_CONNECTIONS` and `DB_INNODB_BUFFER_POOL_SIZE` (crucial for InnoDB performance).
-- **Cron Resources**: Configure CPU and memory limits for the cron container (`CRON_CPUS`, `CRON_MEMORY`).    
+- **Cron Resources**: Configure CPU and memory limits for the cron container (`CRON_CPUS`, `CRON_MEMORY`).
 
 For detailed sizing profiles (Small/Medium/Large) and capacity planning, see the **[Sizing Guide](docs/sizing.md)**.
 
@@ -113,7 +119,7 @@ You can enable additional stack features for specific legacy applications via `.
 ## Management Commands
 
 | Command | Description |
-|---------|-------------|
+| --------- | ------------- |
 | `make help` | Show all available commands |
 | `make init` | Initialize environment (.env) |
 | `make start` | Start the stack (creates/validates .env) |
@@ -133,6 +139,9 @@ You can enable additional stack features for specific legacy applications via `.
 | `make clean` | Clean configs and volumes (requires confirmation) |
 | `make db` | Wait for MariaDB console, or use `import`/`export` |
 | `make composer <cmd>` | Run Composer commands inside the app container (e.g. `require`, `install`, `update`) |
+| `make php-info` | Inspect active PHP-FPM configuration |
+| `make opcache-clear` | Zero-downtime OPcache reset |
+| `make setup-index` | Generate or update legacy `public/index.php` from scanned libraries |
 | `make config` | Validate Docker Compose config |
 | `make ctop` | Monitor containers using ctop |
 | `make open-ports` | Expose DB & SFTP ports externally (0.0.0.0) |
@@ -140,9 +149,13 @@ You can enable additional stack features for specific legacy applications via `.
 | `make open-db` / `close-db` | Expose or restrict only the DB |
 | `make open-sftp` / `close-sftp` | Expose or restrict only SFTP |
 | `make redis-info` | Show Redis server statistics |
-| `make redis-monitor`| Monitor Redis commands in real-time |
-| `make redis-ping`   | Ping Redis server |
+| `make redis-monitor` | Monitor Redis commands in real-time |
+| `make redis-ping` | Ping Redis server |
 | `make crontab-init` | Create example crontab file |
+| `make release` | Generate a new CalVer release, update CHANGELOG and git tag |
+| `make update [version=vX]` | Safely fetch and upgrade the stack codebase |
+| `make rollback` | Interactively select and rollback to a previous release tag |
+| `make check-updates` | Check Docker registries for base image updates |
 | `make size-xs` | Apply Extra Small sizing profile (Dev/Hobby) |
 | `make size-s` | Apply Small sizing profile (Staging/Low traffic) |
 | `make size-m` | Apply Medium sizing profile (Small Production) |
@@ -155,7 +168,7 @@ You can enable additional stack features for specific legacy applications via `.
 
 - **app**: PHP-FPM + Apache (serversideup/php image).
 - **cron**: CLI container to run scheduled tasks.
-- **db**: MariaDB 12.2.2.
+- **db**: MariaDB 12.3.2.
 - **sftp**: Secure file transfer (linuxserver/openssh-server), restricted to localhost.
 - **redis** (Optional): In-memory cache store (Powered by Valkey).
 

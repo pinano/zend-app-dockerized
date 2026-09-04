@@ -87,15 +87,15 @@ FLUSH PRIVILEGES;
 ```
 
 For Zabbix to connect from the host to the container, use Macro items on your Zabbix Server in the "Macros" tab of the created host:
-- `{$MYSQL.DSN}` = `tcp://localhost:33<PROJECT_ID>` (By default, each stack binds MariaDB using the `PROJECT_ID` in `.env`, e.g., `33999`).
+- `{$MYSQL.DSN}` = `tcp://<DB_BIND_IP>:33<PROJECT_ID>` (By default, `.env` binds MariaDB to the docker bridge IP `172.17.0.1:33<PROJECT_ID>`, e.g., `tcp://172.17.0.1:33999`). If your Zabbix Agent is configured to query `localhost`, ensure `DB_BIND_IP=127.0.0.1` or `0.0.0.0` in your project's `.env`.
 - `{$MYSQL.USER}` = `zbx_monitor`
 - `{$MYSQL.PASSWORD}` = `<STRONG_PASSWORD>`
 
 > **Note:** Since there are multiple MariaDB containers on different ports, Zabbix Agent 2 can have a multi-database profile by passing the URI in the Key, or by duplicating the Host in Zabbix, assigning it the MySQL template but specifying the corresponding ports for each client.
 
 ### C. PHP-FPM Metrics
-To enable PHP-FPM status metrics (requires configuration override):
-1. Ensure you have `pm.status_path = /status` active in the `/usr/local/etc/php-fpm.d/zz-docker.conf` file of your container.
+To enable PHP-FPM status metrics:
+1. Uncomment `pm.status_path = /status` in `docker/php/zz-docker.conf` (bind-mounted to `/usr/local/etc/php-fpm.d/zz-docker.conf` inside the container) and run `make restart`.
 2. Apply the `PHP-FPM by HTTP` template or host the proxy in the Zabbix interface.
 
 ## Summary of Benefits

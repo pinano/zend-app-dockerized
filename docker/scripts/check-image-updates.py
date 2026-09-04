@@ -232,10 +232,11 @@ def get_quay_tags(image_name):
 
 def get_latest_version(image_str):
     # Parse image string
-    # Pattern 1: registry/namespace/name:tag
-    # Pattern 2: namespace/name:tag
-    # Pattern 3: name:tag
-    parts = image_str.split(':')
+    # Pattern 1: registry:port/namespace/name:tag
+    # Pattern 2: registry/namespace/name:tag
+    # Pattern 3: namespace/name:tag
+    # Pattern 4: name:tag
+    parts = image_str.rsplit(':', 1)
     if len(parts) != 2:
         return None, "Invalid format"
     
@@ -359,8 +360,8 @@ def scan_compose_files(env):
                         if not raw_from:
                             raw_from = dockerfile_base
                             
-                        image_name, resolved_tag = dockerfile_base.split(':', 1)
-                        _, raw_tag = raw_from.split(':', 1)
+                        image_name, resolved_tag = dockerfile_base.rsplit(':', 1)
+                        _, raw_tag = raw_from.rsplit(':', 1)
                         
                         vars_used = VAR_REGEX.findall(raw_tag)
                         var_names = [v[0] for v in vars_used]
@@ -382,8 +383,8 @@ def scan_compose_files(env):
                         if ':' not in resolved_img:
                             continue
                             
-                        image_name, resolved_tag = resolved_img.split(':', 1)
-                        _, raw_tag = raw_img.split(':', 1)
+                        image_name, resolved_tag = resolved_img.rsplit(':', 1)
+                        _, raw_tag = raw_img.rsplit(':', 1)
                         
                         vars_used = VAR_REGEX.findall(raw_tag)
                         var_names = [v[0] for v in vars_used]
@@ -454,7 +455,7 @@ def apply_updates(image_updates, env):
         if meta['vars']:
             var_name = meta['vars'][0]
             old_val = env.get(var_name) or os.environ.get(var_name) or ""
-            new_tag = new_img.split(':')[1]
+            new_tag = new_img.rsplit(':', 1)[1]
             new_val = deduce_new_var_value(meta['original_tag'], meta['resolved_tag'], new_tag, var_name, old_val)
             if new_val:
                 env_updates[var_name] = new_val
@@ -522,8 +523,7 @@ def main():
     image_updates_dict = {}
     
     for img_str, meta in sorted(images.items()):
-        current_tag = img_str.split(':')[1]
-        image_name = img_str.split(':')[0]
+        image_name, current_tag = img_str.rsplit(':', 1)
         
         display_name = image_name
         if len(display_name) > 43:

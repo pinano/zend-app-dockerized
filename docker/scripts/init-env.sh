@@ -62,7 +62,7 @@ set_env_var() {
     local key="$1"
     local val="$2"
     local escaped_val
-    escaped_val=$(echo -n "$val" | sed -e 's/[\/&]/\\&/g')
+    escaped_val=$(echo -n "$val" | sed -e 's/[\\/&|]/\\&/g')
     if [[ "$(uname)" == "Darwin" ]]; then
         sed -i '' "s|^[[:space:]]*${key}=.*|${key}=${escaped_val}|" "$ENV_FILE"
     else
@@ -129,12 +129,19 @@ else
 fi
 
 # Load existing PHP_VERSION in dist as default fallback
-dist_php=$(grep '^PHP_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"'\''\r ' || echo "7.4")
+dist_php=$(grep '^PHP_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"'\''\r ' || echo "8.5")
 
 # --- Prompts ---
 
 # 1. PROJECT_ID
-prompt_var "PROJECT_ID" "PROJECT_ID" "$default_pid" "A unique numeric identifier for the project (e.g. 101, 999). Used to namespace port assignments."
+while true; do
+    prompt_var "PROJECT_ID" "PROJECT_ID" "$default_pid" "A unique numeric identifier for the project between 1 and 999 (e.g. 101, 999). Used to namespace port assignments (33xxx / 22xxx)."
+    if [[ "$PROJECT_ID" =~ ^[0-9]+$ ]] && [ "$PROJECT_ID" -ge 1 ] && [ "$PROJECT_ID" -le 999 ]; then
+        break
+    else
+        echo -e "${BOLD}${YELLOW}❌ Error: PROJECT_ID must be a numeric integer between 1 and 999 to stay within valid TCP port ranges (33xxx / 22xxx <= 65535).${RESET}"
+    fi
+done
 
 # 2. PROJECT_NAME
 prompt_var "PROJECT_NAME" "PROJECT_NAME" "$default_pname" "The name of the project. Used for container hostnaming, service names, and logs."
@@ -143,7 +150,7 @@ prompt_var "PROJECT_NAME" "PROJECT_NAME" "$default_pname" "The name of the proje
 prompt_var "APP_ENV" "APP_ENV" "development" "Application environment mode. Options: development, staging, production."
 
 # 4. PHP_VERSION
-prompt_var "PHP_VERSION" "PHP_VERSION" "$dist_php" "The PHP execution engine version to run in the application container (e.g., 7.4, 8.0, 8.1, 8.2)."
+prompt_var "PHP_VERSION" "PHP_VERSION" "$dist_php" "The PHP execution engine version to run in the application container (e.g., 5.6, 7.4, 8.5)."
 
 # 5. COMPOSE_PROFILES
 prompt_var "COMPOSE_PROFILES" "COMPOSE_PROFILES" "sftp" "Orchestration profiles to enable. 'sftp' starts an SFTP container for secure remote file access. Use 'none' to disable auxiliary services, or separate multiple with commas."

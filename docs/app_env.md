@@ -46,13 +46,15 @@ By making this small change, your container's `APP_ENV` variable (defined in `.e
 
 ## 3. OPcache Settings for Development
 
-When switching to `APP_ENV=development`, you should also adjust the OPcache settings in your `.env` file to allow live code editing without container restarts:
+When switching to `APP_ENV=development`, the stack's environment loader (`docker/scripts/set-env-vars.sh`) automatically configures:
+- `PHP_OPCACHE_VALIDATE_TIMESTAMPS=1`
+- `PHP_OPCACHE_REVALIDATE_FREQ=0`
 
+This forces PHP to recheck files on every request, making code changes visible instantly without container restarts.
+
+You can also optionally enable Xdebug by setting:
 ```ini
-APP_ENV=development
-PHP_OPCACHE_VALIDATE_TIMESTAMPS=1
-PHP_OPCACHE_REVALIDATE_FREQ=0
 PHP_XDEBUG_MODE=debug
 ```
 
-This makes PHP recheck files on every request, so code changes are visible instantly. **Remember to revert these settings in production** (the `.env.dist` defaults are already optimized for production).
+In production (`APP_ENV=production`), `validate_timestamps` is turned off by default (`0`) to maximize performance.

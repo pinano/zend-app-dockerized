@@ -2,3 +2,9 @@
 *.sql
 mariadb_data/
 docroot/
+backups/
+__pycache__/
+*.py[cod]
+*$py.class
+.DS_Store
+Thumbs.db

@@ -31,10 +31,20 @@ $paths = [
 ];
 set_include_path(implode(PATH_SEPARATOR, $paths));
 
-// Credentials for application.ini
-$dbVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'];
-foreach ($dbVars as $var) {
-    define($var, getenv_docker($var, 'unknown'));
+// Database & Cache Credentials for application.ini
+$envConstants = [
+    'DB_HOST'    => 'unknown',
+    'DB_PORT'    => '3306',
+    'DB_NAME'    => 'unknown',
+    'DB_USER'    => 'unknown',
+    'DB_PASS'    => 'unknown',
+    'REDIS_HOST' => 'redis',
+    'REDIS_PORT' => '6379'
+];
+foreach ($envConstants as $const => $default) {
+    if (!defined($const)) {
+        define($const, getenv_docker($const, $default));
+    }
 }
 
 // Composer autoloader

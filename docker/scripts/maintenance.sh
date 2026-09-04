@@ -11,11 +11,16 @@ echo "--- [$(date)] Starting Maintenance Task ---"
 # Using :> to truncate preserves the file descriptor for the tail process.
 # Threshold lowered to 5MB to prevent runaway logs from filling the tmpfs volume,
 # which would cause all cache and session writes to fail (complete outage).
-LOG_FILES=("$TMP_DIR"/*.log "/var/www/html/application/logs/error.log")
+shopt -s nullglob 2>/dev/null || true
+LOG_FILES=("$TMP_DIR"/*.log "$TMP_DIR"/*/*.log /var/www/html/application/logs/*.log)
+shopt -u nullglob 2>/dev/null || true
 for log in "${LOG_FILES[@]}"; do
-    if [ -f "$log" ] && [ $(stat -c%s "$log") -gt 5242880 ]; then
-        echo "Truncating large log file: $log"
-        : > "$log"
+    if [ -f "$log" ]; then
+        log_size=$(stat -c%s "$log" 2>/dev/null || echo 0)
+        if [ "$log_size" -gt 5242880 ]; then
+            echo "Truncating large log file: $log"
+            : > "$log"
+        fi
     fi
 done
 echo "✅ Checked and truncated large log files."
@@ -23,7 +28,8 @@ echo "✅ Checked and truncated large log files."
 # 2. Clean up old sessions (older than 24h)
 if [ -d "$TMP_DIR/sessions" ]; then
     # -mmin +1440 = 24 hours
-    find "$TMP_DIR/sessions" -type f -mmin +1440 -delete
+    find "$TMP_DIR/sessions" -mindepth 1 -type f -mmin +1440 -delete
+    find "$TMP_DIR/sessions" -mindepth 1 -type d -empty -delete 2>/dev/null || true
     echo "✅ Cleaned up sessions older than 24h."
 fi
 
@@ -33,6 +39,7 @@ CACHE_DIRS=("cache" "cache_class" "cache_core" "cache_core_300" "cache_core_60" 
 for cdir in "${CACHE_DIRS[@]}"; do
     if [ -d "$TMP_DIR/$cdir" ]; then
         find "$TMP_DIR/$cdir" -mindepth 1 -type f -mtime +7 -delete
+        find "$TMP_DIR/$cdir" -mindepth 1 -type d -empty -delete 2>/dev/null || true
         echo "✅ Cleaned up stale files in $cdir (older than 7 days)."
     fi
 done

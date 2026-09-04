@@ -35,7 +35,7 @@ Legacy ZF1 applications traditionally rely on a `.htaccess` file in the `public/
 
 In this modern Docker environment:
 - **`AllowOverride None`** is configured for performance (avoids scanning the filesystem on every request for `.htaccess` files).
-- **Zend Rewrite Rules** are defined globally in Apache's virtual host configuration at [httpd.conf](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docker/apache/httpd.conf).
+- **Zend Rewrite Rules** are defined globally in Apache's virtual host configuration at [httpd.conf](../docker/apache/httpd.conf).
 
 Therefore, you **do not need** a `.htaccess` file in your `public/` folder. All requests not matching a physical static file, folder, or symlink are automatically forwarded to `index.php` at the Apache server level.
 
@@ -63,7 +63,7 @@ If your project requires modern Composer packages (or you are gradually moderniz
    ```bash
    composer install --prefer-dist --optimize-autoloader
    ```
-3. The entrypoint template ([index.php.sample](file:///Users/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/index.php.sample)) automatically loads `vendor/autoload.php` if present:
+3. The entrypoint template ([index.php.sample](index.php.sample)) automatically loads `vendor/autoload.php` if present:
    ```php
    $composerAutoload = ROOT_DIR . '/vendor/autoload.php';
    if (file_exists($composerAutoload)) {
@@ -89,7 +89,7 @@ make setup-index
 
 ### What does this command do?
 1. Creates the directory `docroot/public` if it does not exist.
-2. Scans `docroot/weblibs/` for directories and maps them to `/var/www/html/weblibs/` container paths. If a library contains a `Classes` subdirectory (e.g. `PHPExcel-1.7.5/Classes`), it automatically resolves to it.
-3. Automatically generates the `docroot/public/index.php` file using [index.php.sample](file:///Users/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/index.php.sample), injecting the detected include paths into the `$paths` array.
+2. Scans `docroot/weblibs/` for directories and maps them to `/var/www/html/weblibs/` container paths. If a library contains a `Classes` subdirectory (e.g. `PHPExcel-1.7.5/Classes`) or a `library` subdirectory (standard for Zend Framework releases, e.g. `Zend-1.12.17/library`), it automatically resolves directly to it.
+3. Automatically generates the `docroot/public/index.php` file using [index.php.sample](index.php.sample), injecting the detected include paths into the `$paths` array.
 4. **Backup protection:** If `index.php` already exists, it automatically creates a `.bak` backup copy of the existing file before applying updates.
 

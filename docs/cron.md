@@ -14,12 +14,11 @@ The heart of the system is the text file:
 
 Everything you write in that file will be interpreted and executed by the cron daemon automatically.
 
-> [!WARNING]
-> **Host Editor Permissions Caveat:** The cron daemon inside the container requires that `/etc/cron.d/app-cron` (which is bind-mounted from `docker/scripts/crontab`) be owned by `root:root` and have `644` permissions.
+> [!NOTE]
+> **Zero-Friction Crontab Syncing & Environment Injection:**
+> In this stack, `docker/scripts/crontab` is mounted as a read-only template (`/etc/crontab.template:ro`). On container boot, the startup script automatically exports all Docker environment variables into `/etc/environment` and prepends them into `/etc/cron.d/app-cron`, setting `root:root` ownership and `644` permissions.
 > 
-> When you edit `docker/scripts/crontab` on your host machine, many editors (such as VS Code or PhpStorm) save changes by replacing the file or changing its ownership back to your host user UID (e.g. `1000:1000`). This will cause the cron daemon inside the container to reject the file with a "WRONG FILE OWNER" warning, silently ignoring your updates.
-> 
-> If your cron jobs stop executing after an edit, you must run `make restart` (or `docker compose restart cron`) to trigger the container's startup script, which automatically fixes the file ownership and permissions (`chown root:root && chmod 644`).
+> This completely eliminates the classic "WRONG FILE OWNER" error caused by host editors (like VS Code or PhpStorm) when editing crontab files, and guarantees that your cron jobs have full access to database and application environment variables. To apply changes made to `docker/scripts/crontab`, run `make restart cron`.
 
 ---
 

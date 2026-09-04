@@ -44,7 +44,7 @@ macOS includes `make` via the Xcode Command Line Tools.
   git clone <repository-url> project-folder
   cd project-folder
   ```
-- Copy your legacy codebase into `docroot/` (see [Dockerization Guide](file:///home/pinano/Documents/webroot/pinano-zend-app-dockerized/docs/dockerizing-legacy-app.md)).
+- Copy your legacy codebase into `docroot/` (see [Dockerization Guide](dockerizing-legacy-app.md)).
 - Initialize the environment configuration:
   ```bash
   make init
