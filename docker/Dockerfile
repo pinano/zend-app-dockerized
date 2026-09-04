@@ -12,6 +12,22 @@ ARG GROUP_ID=1000
 # Switch to root to perform system-level configuration
 USER root
 
+# --- DEBIAN ARCHIVE FIX ---
+# Debian 11 (Bullseye) reached end of LTS and moved to archive.debian.org.
+# In archive.debian.org, Bullseye packages (including all 11.11 security updates) are consolidated
+# into a single "bullseye" repository without separate security/updates suites.
+RUN if grep -q "bullseye" /etc/os-release 2>/dev/null; then \
+        echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until && \
+        echo 'deb http://archive.debian.org/debian bullseye main contrib non-free' > /etc/apt/sources.list && \
+        rm -f /etc/apt/sources.list.d/*.list; \
+    elif grep -q "buster" /etc/os-release 2>/dev/null; then \
+        echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99no-check-valid-until && \
+        echo 'deb http://archive.debian.org/debian buster main contrib non-free' > /etc/apt/sources.list && \
+        echo 'deb http://archive.debian.org/debian-security buster/updates main contrib non-free' >> /etc/apt/sources.list && \
+        rm -f /etc/apt/sources.list.d/*.list; \
+    fi
+# --------------------------
+
 # --- USER SYNC ---
 # 1. Update www-data UID and GID to match the host user (e.g., 1002)
 # 2. Use find to reassign ownership of existing files from the old ID (33) to the new one
@@ -27,10 +43,10 @@ COPY docker/scripts/init-app.sh /etc/entrypoint.d/99-init-app.sh
 RUN chmod +x /etc/entrypoint.d/99-init-app.sh
 # -----------------
 
-# --- COMPOSER & TOOLS ---
-# Install system packages required by Composer (git, unzip, zip) and copy Composer binary
+# --- COMPOSER, TOOLS & BUILD LIBS ---
+# Install system packages required by Composer and graphics build libraries
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends git unzip zip && \
+    apt-get install -y --no-install-recommends git unzip zip libfontconfig1-dev libcairo2-dev libfreetype-dev && \
     rm -rf /var/lib/apt/lists/*
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_HOME=/var/www/html/tmp/composer \
