@@ -56,6 +56,40 @@ if (file_exists($composerAutoload)) {
 /** Zend_Application */
 require_once 'Zend/Application.php';
 
+// --- Global Error & Exception Forwarding to stderr (for Docker/Loki observability) ---
+// Catches PHP fatals, parse errors, and warnings that bypass Zend's ErrorController.
+// These are forwarded via error_log() which, thanks to PHP-FPM catch_workers_output=yes,
+// flows into Docker container logs and is picked up by Grafana Alloy / Loki.
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR])) {
+        error_log(sprintf(
+            '[ZF1 FATAL] %s in %s:%d',
+            $error['message'],
+            $error['file'],
+            $error['line']
+        ));
+    }
+});
+
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+    if (!(error_reporting() & $errno)) {
+        return false; // Respect @ suppression and error_reporting level
+    }
+    $map = [
+        E_WARNING         => 'WARNING',
+        E_NOTICE          => 'NOTICE',
+        E_DEPRECATED      => 'DEPRECATED',
+        E_USER_WARNING    => 'USER_WARNING',
+        E_USER_NOTICE     => 'USER_NOTICE',
+        E_USER_DEPRECATED => 'USER_DEPRECATED',
+    ];
+    $level = $map[$errno] ?? 'ERROR';
+    error_log(sprintf('[PHP %s] %s in %s:%d', $level, $errstr, $errfile, $errline));
+    return false; // Let PHP continue its normal handling (e.g., log to file)
+});
+
 // App bootstrap
 $application = new Zend_Application(
     APPLICATION_ENV,

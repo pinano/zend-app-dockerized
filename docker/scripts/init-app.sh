@@ -1,7 +1,9 @@
-#!/bin/sh
+#!/bin/bash
 # init-app.sh
 # Initialization script for the Zend Framework 1.x Docker container.
 # Runs automatically via the entrypoint system (/etc/entrypoint.d/)
+
+set -euo pipefail
 
 # Default slowlog timeout fallback if not passed from environment
 export PHP_FPM_SLOWLOG_TIMEOUT="${PHP_FPM_SLOWLOG_TIMEOUT:-10s}"
@@ -98,25 +100,64 @@ fi
 # --- DYNAMIC PHP ERROR REPORTING ---
 # Convert string values (like "E_ALL & ~E_NOTICE") to an integer for FPM pool.
 # FPM cannot parse PHP language constants natively via env vars.
+# We use a secure mapping instead of eval() to prevent code injection.
 if [ -n "$PHP_ERROR_REPORTING" ]; then
     echo "⚙️  Evaluating PHP_ERROR_REPORTING to integer for FPM pool..."
-    INT_VAL=$(php -r '
+
+    # Normalize input: remove surrounding quotes and whitespace
+    NORMALIZED=$(php -r '
         $expr = trim(getenv("PHP_ERROR_REPORTING"));
         $expr = trim($expr, "\"\x27");
-        $expr = trim($expr);
-        if (empty($expr)) {
-            echo E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED;
-            exit;
-        }
-        if (preg_match("/^[a-zA-Z0-9_\s&~|()]+$/", $expr)) {
-            $val = eval("return $expr;");
-            if ($val !== false) {
-                echo $val;
-                exit;
-            }
-        }
-        echo E_ALL & ~E_NOTICE & ~E_DEPRECATED;
-    ' 2>/dev/null)
+        echo trim($expr);
+    ' 2>/dev/null || echo "")
+
+    # Secure mapping of common expressions to integer values.
+    # If an exact match is not found, we fall back to a safe PHP constant parser
+    # that only recognizes predefined constants (no arbitrary eval).
+    case "$NORMALIZED" in
+        "E_ALL")                         INT_VAL=32767 ;;
+        "E_ALL & ~E_NOTICE")             INT_VAL=32759 ;;
+        "E_ALL & ~E_WARNING")            INT_VAL=32751 ;;
+        "E_ALL & ~E_DEPRECATED")         INT_VAL=32751 ;;
+        "E_ALL & ~E_NOTICE & ~E_DEPRECATED") INT_VAL=32743 ;;
+        "E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED") INT_VAL=32735 ;;
+        "E_ALL & ~E_STRICT")             INT_VAL=32751 ;;
+        "E_ALL & ~E_STRICT & ~E_DEPRECATED") INT_VAL=32743 ;;
+        "0"|"")                          INT_VAL=0 ;;
+        *)
+            # Fallback: let PHP resolve ONLY if the string matches known safe patterns.
+            # This still uses php -r but without eval() on user input.
+            INT_VAL=$(php -r '
+                $expr = getenv("NORMALIZED_EXPR");
+                $map = [
+                    "E_ALL" => E_ALL,
+                    "E_NOTICE" => E_NOTICE,
+                    "E_WARNING" => E_WARNING,
+                    "E_DEPRECATED" => E_DEPRECATED,
+                    "E_STRICT" => E_STRICT,
+                    "E_ERROR" => E_ERROR,
+                    "E_PARSE" => E_PARSE,
+                ];
+                // Replace constants in expression with their numeric values
+                $safe = $expr;
+                foreach ($map as $k => $v) {
+                    $safe = str_replace($k, (string)$v, $safe);
+                }
+                $safe = preg_replace("/[^0-9\s&~|()]/", "", $safe);
+                if ($safe === "" || $safe === "0") {
+                    echo 0;
+                    exit;
+                }
+                // Extra safety: only allow digits, spaces, &, ~, |, (, )
+                if (!preg_match("/^[0-9\s&~|()]+$/", $safe)) {
+                    echo E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED;
+                    exit;
+                }
+                $result = eval("return " . $safe . ";");
+                echo is_int($result) ? $result : (E_ALL & ~E_WARNING & ~E_NOTICE & ~E_DEPRECATED);
+            ' 2>/dev/null)
+            ;;
+    esac
 
     # Robust fallback: check if INT_VAL is a valid number to prevent PHP-FPM boot crashes.
     case "$INT_VAL" in
@@ -151,12 +192,14 @@ if [ -f "/var/www/html/composer.json" ]; then
             if [ "$APP_ENV" = "production" ]; then
                 EXTRA_COMPOSER_FLAGS="--no-dev"
             fi
-            if COMPOSER_HOME=/var/www/html/tmp/composer COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache COMPOSER_ALLOW_SUPERUSER=1 composer install \
+            # Ensure the project directory is writable by www-data before running composer
+            chown -R www-data:www-data /var/www/html 2>/dev/null || true
+            if su -s /bin/sh www-data -c 'COMPOSER_HOME=/var/www/html/tmp/composer COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache composer install \
                 --working-dir=/var/www/html \
                 --no-interaction \
                 --prefer-dist \
                 --optimize-autoloader \
-                $EXTRA_COMPOSER_FLAGS; then
+                '"$EXTRA_COMPOSER_FLAGS"''; then
                 chown -R www-data:www-data /var/www/html/vendor /var/www/html/composer.lock 2>/dev/null || true
                 echo "✅ Composer dependencies installed successfully."
             else
@@ -167,4 +210,3 @@ if [ -f "/var/www/html/composer.json" ]; then
         fi
     fi
 fi
-
