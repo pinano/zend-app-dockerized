@@ -1,3 +1,8 @@
+## v2026.09.27 (2026-09-27)
+
+- feat: enhance security headers, PHP hardening, global error logging, and JSON log writer (538b4d8)
+- feat: add structured JSON logging documentation and apply PHP security hardening measures (d47cf51)
+
 ## v2026.09.04 (2026-09-04)
 
 - refactor: improve environment sync scripts, validate project IDs, and enhance image parsing reliability (947f0d6)
