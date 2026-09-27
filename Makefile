@@ -850,7 +850,7 @@ size-xs: _ensure_env
 	$(call set_env,PHP_FPM_PM_START_SERVERS,2)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,1)
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,3)
-	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,1000)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
 	@echo "✅ EXTRA SMALL profile applied. Run 'make start' to apply changes."
 
@@ -884,7 +884,7 @@ size-s: _ensure_env
 	$(call set_env,PHP_FPM_PM_START_SERVERS,3)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,2)
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,5)
-	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,1000)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
 	@echo "✅ SMALL profile applied. Run 'make start' to apply changes."
 
@@ -918,7 +918,7 @@ size-m: _ensure_env
 	$(call set_env,PHP_FPM_PM_START_SERVERS,8)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,5)
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,15)
-	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,1000)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
 	@echo "✅ MEDIUM profile applied. Run 'make start' to apply changes."
 
@@ -952,7 +952,7 @@ size-l: _ensure_env
 	$(call set_env,PHP_FPM_PM_START_SERVERS,12)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,8)
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,24)
-	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,1000)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,10s)
 	@echo "✅ LARGE profile applied. Run 'make start' to apply changes."
 
@@ -986,7 +986,7 @@ size-xl: _ensure_env
 	$(call set_env,PHP_FPM_PM_START_SERVERS,20)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,15)
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,45)
-	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,1000)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,5s)
 	@echo "✅ EXTRA LARGE profile applied. Run 'make start' to apply changes."
 
@@ -1020,7 +1020,7 @@ size-xxl: _ensure_env
 	$(call set_env,PHP_FPM_PM_START_SERVERS,40)
 	$(call set_env,PHP_FPM_PM_MIN_SPARE_SERVERS,30)
 	$(call set_env,PHP_FPM_PM_MAX_SPARE_SERVERS,90)
-	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,500)
+	$(call set_env,PHP_FPM_PM_MAX_REQUESTS,1000)
 	$(call set_env,PHP_FPM_SLOWLOG_TIMEOUT,5s)
 	@echo "✅ DOUBLE EXTRA LARGE profile applied. Run 'make start' to apply changes."
 

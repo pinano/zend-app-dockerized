@@ -1,6 +1,6 @@
 # Lightweight CLI image for running scheduled tasks (cron)
 # Uses serversideup/php CLI variant — no Apache, no FPM (~150-200MB lighter)
-ARG PHP_VERSION=8.5
+ARG PHP_VERSION=7.4
 
 # Choose our base image
 FROM serversideup/php:${PHP_VERSION}-cli
@@ -36,7 +36,7 @@ RUN if grep -q "bullseye" /etc/os-release 2>/dev/null; then \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends cron git unzip zip && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8.4 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_HOME=/var/www/html/tmp/composer \
     COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache
 # ----------------------------

@@ -1,6 +1,6 @@
 # Image for running the main app
 # Declare default PHP version before FROM
-ARG PHP_VERSION=8.5
+ARG PHP_VERSION=7.4
 
 # Choose our base image
 FROM serversideup/php:${PHP_VERSION}-fpm-apache
@@ -51,7 +51,7 @@ RUN chmod +x /etc/entrypoint.d/99-init-app.sh
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git unzip zip && \
     rm -rf /var/lib/apt/lists/*
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8.4 /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_HOME=/var/www/html/tmp/composer \
     COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache
 # ------------------------
