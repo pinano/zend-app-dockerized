@@ -44,7 +44,7 @@ if [ -f "$ENV_PATH" ]; then
     case "$key" in
       *' '*|*'	'*|'') continue ;;
     esac
-    val=$(echo -n "$val" | tr -d '\r')
+    val=$(printf '%s' "$val" | tr -d '\r')
     case "$val" in
       \"*\") val="${val#\"}"; val="${val%\"}" ;;
       \'*\') val="${val#\'}"; val="${val%\'}" ;;

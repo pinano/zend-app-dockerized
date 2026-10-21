@@ -1,5 +1,7 @@
 # Makefile for Dockerized Zend Framework 1.x App
 
+SHELL := /bin/bash
+
 # Default target
 # Colors for help menu
 BOLD  := \033[1m

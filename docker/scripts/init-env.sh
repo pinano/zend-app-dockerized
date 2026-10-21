@@ -62,7 +62,7 @@ set_env_var() {
     local key="$1"
     local val="$2"
     local escaped_val
-    escaped_val=$(echo -n "$val" | sed -e 's/[\\/&|]/\\&/g')
+    escaped_val=$(printf '%s' "$val" | sed -e 's/[\\/&|]/\\&/g')
     if [[ "$(uname)" == "Darwin" ]]; then
         sed -i '' "s|^[[:space:]]*${key}=.*|${key}=${escaped_val}|" "$ENV_FILE"
     else
