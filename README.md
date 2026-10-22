@@ -23,7 +23,7 @@ A modernized Docker stack for running legacy Zend Framework 1.x applications, fe
 ## Features
 
 - **Configurable PHP Version**: Switch between PHP versions (e.g., 5.6, 7.4, 8.5) via `.env`.
-- **MariaDB 12**: Latest stable database version.
+- **Configurable MariaDB Version**: Choose between MariaDB 10.2, 10.11, 11.4 LTS, or 12.3 via `.env` (ideal for legacy MySQL 5.x apps).
 - **Performance Tuned**: Optimized `opcache` and `realpath_cache` settings for ZF1.
 - **Tmpfs Integration**: High-performance, ephemeral storage for ZF1 cache/sessions.
 - **Secure by Default**: SFTP restricted to localhost, DB restricted to Docker bridge IP.
@@ -176,7 +176,7 @@ my-zend-project/             # Zend project repository root
 
 - **app**: PHP-FPM + Apache (serversideup/php image).
 - **cron**: CLI container to run scheduled tasks.
-- **db**: MariaDB 12.3.2.
+- **db**: MariaDB (configurable version via MARIADB_VERSION, e.g. 10.2, 11.4 LTS, 12.3).
 - **sftp**: Secure file transfer (linuxserver/openssh-server), restricted to localhost.
 - **redis** (Optional): In-memory cache store (Powered by Valkey).
 
