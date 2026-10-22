@@ -131,8 +131,9 @@ else
     default_pname=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]//g')
 fi
 
-# Load existing PHP_VERSION in dist as default fallback
+# Load existing PHP_VERSION and MARIADB_VERSION in dist as default fallbacks
 dist_php=$(grep '^PHP_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"'\''\r ' || echo "8.5")
+dist_mariadb=$(grep '^MARIADB_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"'\''\r ' || echo "12.3.3")
 
 # --- Prompts ---
 
@@ -155,25 +156,45 @@ prompt_var "APP_ENV" "APP_ENV" "development" "Application environment mode. Opti
 # 4. PHP_VERSION
 prompt_var "PHP_VERSION" "PHP_VERSION" "$dist_php" "The PHP execution engine version to run in the application container (e.g., 5.6, 7.4, 8.5)."
 
-# 5. COMPOSE_PROFILES
+# 5. MARIADB_VERSION
+echo -e "\n${BOLD}${CYAN}👉 MARIADB_VERSION${RESET}"
+echo -e "${GRAY}Select the MariaDB database engine version for this project:${RESET}"
+echo -e "  ${BOLD}1)${RESET} 12.3.3  ${GRAY}(Latest rolling release)${RESET}"
+echo -e "  ${BOLD}2)${RESET} 11.4    ${GRAY}(Current Long Term Support - LTS)${RESET}"
+echo -e "  ${BOLD}3)${RESET} 10.11   ${GRAY}(LTS - High compatibility with legacy MySQL 5.7 / ZF1 apps)${RESET}"
+echo -e "  ${BOLD}4)${RESET} 10.6    ${GRAY}(Legacy LTS - Maximum backward compatibility)${RESET}"
+echo -e "  ${GRAY}Or type any custom MariaDB tag (e.g., 10.5, 11.2, etc.)${RESET}"
+
+read -r -p "Select option [1-4] or enter version [${dist_mariadb}]: " user_mdb_input
+case "${user_mdb_input:-$dist_mariadb}" in
+    1) MARIADB_VERSION="12.3.3" ;;
+    2) MARIADB_VERSION="11.4" ;;
+    3) MARIADB_VERSION="10.11" ;;
+    4) MARIADB_VERSION="10.6" ;;
+    *) MARIADB_VERSION="${user_mdb_input:-$dist_mariadb}" ;;
+esac
+set_env_var "MARIADB_VERSION" "$MARIADB_VERSION"
+echo -e "${GREEN}✓ MARIADB_VERSION set to: ${MARIADB_VERSION}${RESET}"
+
+# 6. COMPOSE_PROFILES
 prompt_var "COMPOSE_PROFILES" "COMPOSE_PROFILES" "sftp" "Orchestration profiles to enable. 'sftp' starts an SFTP container for secure remote file access. Use 'none' to disable auxiliary services, or separate multiple with commas."
 
-# 6. DB_NAME
+# 7. DB_NAME
 prompt_var "DB_NAME" "DB_NAME" "$PROJECT_NAME" "The name of the database schema to automatically create on startup."
 
-# 7. DB_USER
+# 8. DB_USER
 prompt_var "DB_USER" "DB_USER" "$PROJECT_NAME" "The credentials username for application database access."
 
-# 8. DB_PASS
+# 9. DB_PASS
 prompt_password "DB_PASS" "DB_PASS" "The secure password for the database user account."
 
-# 9. DB_ROOT_PASS
+# 10. DB_ROOT_PASS
 prompt_password "DB_ROOT_PASS" "DB_ROOT_PASS" "The root superuser administration password for MariaDB."
 
-# 10. SFTP_USER
+# 11. SFTP_USER
 prompt_var "SFTP_USER" "SFTP_USER" "$PROJECT_NAME" "The authorized username allowed to log in and upload files via SFTP."
 
-# 11. SFTP_PASS
+# 12. SFTP_PASS
 prompt_password "SFTP_PASS" "SFTP_PASS" "The SFTP authentication credentials password."
 
 echo -e "\n${BOLD}${GREEN}========================================================"

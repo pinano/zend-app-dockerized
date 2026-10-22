@@ -171,7 +171,7 @@ services:
 
   # --- MariaDB ---
   db:
-    image: mariadb:12.3.3
+    image: mariadb:${MARIADB_VERSION:-12.3.3}
     container_name: ${PROJECT_NAME}-db
     command:
       # sql_mode: STRICT_TRANS_TABLES intentionally omitted for legacy ZF1 compatibility.
