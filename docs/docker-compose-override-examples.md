@@ -22,7 +22,7 @@ services:
         constraints:
           - node.role == worker
     volumes:
-      - /mnt/nfs/projecta/docroot:/var/www/html # Override local bind mount with NFS
+      - /mnt/nfs/projecta:/var/www/html # Override local bind mount with NFS
 
 networks:
   backnet:

@@ -10,7 +10,7 @@ import json
 try:
     import yaml
 except ImportError:
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     for venv in ['.venv', 'venv']:
         venv_python = os.path.join(project_root, venv, 'bin', 'python3')
         if os.path.exists(venv_python):

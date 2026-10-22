@@ -8,7 +8,7 @@ env_path = '.env'
 # If not in current working directory, check project root
 if not os.path.exists(env_dist_path):
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    project_root = os.path.dirname(os.path.dirname(script_dir))
+    project_root = os.path.dirname(script_dir)
     candidate = os.path.join(project_root, '.env.dist')
     if os.path.exists(candidate):
         os.chdir(project_root)

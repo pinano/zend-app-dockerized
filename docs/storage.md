@@ -16,9 +16,9 @@ The stack utilizes two distinctly different storage mechanisms:
 > If your ZF1 application relies on storing user session files or temporary PDF generations on disk, be aware that a `make restart` will instantly log out all currently active users. If you need session persistence across deployments, consider enabling the [Redis Session Backend](redis.md) instead.
 
 ### 2. Persistent Storage (Volumes)
-* **Location:** `./mariadb_data` (Database) and `./docroot` (Application Code & Uploads).
+* **Location:** `./mariadb_data` (Database) and `..` (Application Code & Uploads in parent project root).
 * **Behavior:** Data is persistently mapped to folders on your host machine.
 * **Pros:** Data survives container rebuilds, restarts, and system reboots.
 * **Cons:** Slower I/O compared to RAM.
 
-Always ensure that any user-uploaded content (images, documents) is saved outside of the `tmp` directory, directly into your `public` or a dedicated `data` folder within `docroot`.
+Always ensure that any user-uploaded content (images, documents) is saved outside of the `tmp` directory, directly into your `public` or a dedicated `data` folder within your application codebase.

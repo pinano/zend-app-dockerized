@@ -1,7 +1,6 @@
 .env
 *.sql
 mariadb_data/
-docroot/
 backups/
 __pycache__/
 *.py[cod]

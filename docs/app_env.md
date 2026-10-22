@@ -46,7 +46,7 @@ By making this small change, your container's `APP_ENV` variable (defined in `.e
 
 ## 3. OPcache Settings for Development
 
-When switching to `APP_ENV=development`, the stack's environment loader (`docker/scripts/set-env-vars.sh`) automatically configures:
+When switching to `APP_ENV=development`, the stack's environment loader (`scripts/set-env-vars.sh`) automatically configures:
 - `PHP_OPCACHE_VALIDATE_TIMESTAMPS=1`
 - `PHP_OPCACHE_REVALIDATE_FREQ=0`
 

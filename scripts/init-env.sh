@@ -118,6 +118,9 @@ prompt_password() {
 
 # --- Default Value Calculations ---
 dir_name=$(basename "$(pwd)")
+if [[ "$dir_name" == "docker" ]]; then
+    dir_name=$(basename "$(dirname "$(pwd)")")
+fi
 default_pid="999"
 default_pname="$dir_name"
 

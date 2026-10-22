@@ -96,24 +96,32 @@ You can enable additional stack features for specific legacy applications via `.
 
 - **Optional Redis Cache**: Add `COMPOSE_PROFILES=redis` to your `.env` to automatically start a lightweight Redis container (powered by Valkey). **[Read the Full Redis Integration Guide here](docs/redis.md).**
 - **Xdebug for Local Dev**: Set `PHP_XDEBUG_MODE=debug` (or another mode like `develop`) in your `.env`. Keep it disabled in production.
-- **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `docker/scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
-- **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `docker/php/custom.ini` without modifying the core image.
+- **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
+- **Local PHP Overrides**: If a specific project needs an unusual PHP setting (e.g., `max_input_vars = 5000`), simply add it to `php/custom.ini` without modifying the core image.
 - **Verbose Logging**: Adjust `APACHE_LOG_LEVEL=debug` (or `warn` by default) in your `.env` to troubleshoot complex HTTP errors.
 - **Application Error Logs**: ZF1 exceptions are caught by `ErrorController` and invisible in Docker logs by default. See **[Logging Guide](docs/logging.md)** for the required fix and best practices.
 
 ## Project Structure
 
+This Docker stack is designed to be cloned (or added as a Git submodule) directly inside a `docker/` directory within any Zend Framework 1.x application repository:
+
 ```
-.
-├── docker/            # Docker configuration files (Apache, PHP, Scripts)
-│   └── scripts/        
-│       └── init-app.sh # Bootstrapper: Rebuilds /tmp structure automatically & generates healthcheck.php
-├── docs/               # Guides (APP_ENV, Cron, Redis, Sizing)
-├── docroot/            # Application source code
-├── mariadb_data/       # Persistent database storage
-├── .env                # Environment variables
-├── docker-compose.yml  # Container orchestration config
-└── Makefile            # Command task runner
+my-zend-project/             # Zend project repository root
+├── application/             # ZF1 application code (controllers, models, views)
+├── public/                  # Public web root (index.php, assets)
+├── weblibs/                 # Shared legacy libraries (Zend, PHPExcel, etc.)
+└── docker/                  # 👈 THIS REPOSITORY (Docker stack)
+    ├── apache/              # Apache virtual host and security configuration
+    ├── php/                 # Custom PHP & PHP-FPM pool configuration
+    ├── scripts/             # Management, setup and lifecycle scripts
+    │   └── init-app.sh      # Bootstrapper: Rebuilds /tmp & healthcheck.php
+    ├── docs/                # Comprehensive documentation guides
+    ├── mariadb_data/        # Persistent database storage (git-ignored)
+    ├── .env                 # Environment variables
+    ├── docker-compose.yml   # Container orchestration configuration
+    ├── Dockerfile           # Main application container image
+    ├── Dockerfile.cron      # CLI cron daemon container image
+    └── Makefile             # Command task runner
 ```
 
 ## Management Commands

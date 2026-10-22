@@ -39,17 +39,21 @@ macOS includes `make` via the Xcode Command Line Tools.
 - Click **Install** on the popup dialog box.
 
 ### Step C: Run the Stack
-- Clone the repository and navigate into the folder:
+- Clone your Zend project repository and navigate into it:
   ```bash
-  git clone <repository-url> project-folder
-  cd project-folder
+  git clone <zend-project-repo-url> my-zend-project
+  cd my-zend-project
   ```
-- Copy your legacy codebase into `docroot/` (see [Dockerization Guide](dockerizing-legacy-app.md)).
+- Clone this Docker stack repository into a `docker/` folder (or add as a git submodule):
+  ```bash
+  git clone <docker-stack-repo-url> docker
+  cd docker
+  ```
 - Initialize the environment configuration:
   ```bash
   make init
   ```
-- Run the setup tool to scan libraries and create `index.php`:
+- Run the setup tool to scan libraries and create/update `public/index.php`:
   ```bash
   make setup-index
   ```
@@ -88,8 +92,11 @@ To avoid running every `make` or `docker` command with `sudo`, add your user to 
   ```
 
 ### Step D: Run the Stack
-- Clone the repo, place your code in `docroot/`, and run:
+- Clone your Zend project repo, clone this Docker stack into `docker/`, and run:
   ```bash
+  cd my-zend-project
+  git clone <docker-stack-repo-url> docker
+  cd docker
   make init
   make setup-index
   make start
@@ -125,12 +132,10 @@ For Windows development, **WSL2 (Windows Subsystem for Linux)** is highly recomm
 - Open your Ubuntu WSL2 terminal and run:
   ```bash
   sudo apt-get update && sudo apt-get install build-essential -y
-  git clone <repository-url> project-folder
-  cd project-folder
-  ```
-- Place your code in `docroot/` inside the WSL2 system.
-- Initialize and start the stack:
-  ```bash
+  git clone <zend-project-repo-url> my-zend-project
+  cd my-zend-project
+  git clone <docker-stack-repo-url> docker
+  cd docker
   make init
   make setup-index
   make start

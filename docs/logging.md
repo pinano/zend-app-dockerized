@@ -86,7 +86,7 @@ The Zend application log (`app.logfile` in `application.ini`) is typically writt
 > pre-creates this file with correct permissions on startup.
 
 This path lives outside the container's `tmp` volume, so it **persists** across restarts
-(it's under the `docroot` bind mount). To tail it in real time:
+(it's under the application codebase bind mount). To tail it in real time:
 
 ```bash
 make logs-zend

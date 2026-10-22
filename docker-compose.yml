@@ -16,18 +16,18 @@ services:
         condition: service_healthy
     build:
       context: .
-      dockerfile: docker/Dockerfile
+      dockerfile: Dockerfile
       args:
         - PHP_VERSION=${PHP_VERSION:-8.5}
         - USER_ID=${USER_ID:-1000}
         - GROUP_ID=${GROUP_ID:-1000}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ./docker/apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
-      - ./docker/apache/security.conf:/etc/apache2/conf-enabled/security.conf:ro
-      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
-      - ./docker/php/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf:ro
-      - ./docroot:/var/www/html
+      - ./apache/httpd.conf:/etc/apache2/vhost-templates/http.conf:ro
+      - ./apache/security.conf:/etc/apache2/conf-enabled/security.conf:ro
+      - ./php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+      - ./php/zz-docker.conf:/usr/local/etc/php-fpm.d/zz-docker.conf:ro
+      - ${APP_CODE_PATH:-..}:/var/www/html
       - app_tmp:/var/www/html/tmp
     environment:
       # System
@@ -117,17 +117,17 @@ services:
         condition: service_healthy
     build:
       context: .
-      dockerfile: docker/Dockerfile.cron
+      dockerfile: Dockerfile.cron
       args:
         - PHP_VERSION=${PHP_VERSION:-8.5}
         - USER_ID=${USER_ID:-1000}
         - GROUP_ID=${GROUP_ID:-1000}
     volumes:
       - /etc/localtime:/etc/localtime:ro
-      - ./docker/php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
-      - ./docker/scripts/crontab:/etc/crontab.template:ro
-      - ./docker/scripts/maintenance.sh:/usr/local/bin/maintenance.sh:ro
-      - ./docroot:/var/www/html
+      - ./php/custom.ini:/usr/local/etc/php/conf.d/99-custom.ini:ro
+      - ./scripts/crontab:/etc/crontab.template:ro
+      - ./scripts/maintenance.sh:/usr/local/bin/maintenance.sh:ro
+      - ${APP_CODE_PATH:-..}:/var/www/html
       - app_tmp:/var/www/html/tmp
     environment:
       # System
@@ -243,8 +243,8 @@ services:
       PASSWORD_ACCESS: "true"
       SUDO_ACCESS: "false"
     volumes:
-      - ./docroot:/config/upload
-      - ./docker/scripts/init-sftp.sh:/custom-cont-init.d/init-sftp.sh:ro
+      - ${APP_CODE_PATH:-..}:/config/upload
+      - ./scripts/init-sftp.sh:/custom-cont-init.d/init-sftp.sh:ro
     networks:
       - backnet
 

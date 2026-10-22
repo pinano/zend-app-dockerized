@@ -95,7 +95,7 @@ For Zabbix to connect from the host to the container, use Macro items on your Za
 
 ### C. PHP-FPM Metrics
 To enable PHP-FPM status metrics:
-1. Uncomment `pm.status_path = /status` in `docker/php/zz-docker.conf` (bind-mounted to `/usr/local/etc/php-fpm.d/zz-docker.conf` inside the container) and run `make restart`.
+1. Uncomment `pm.status_path = /status` in `php/zz-docker.conf` (bind-mounted to `/usr/local/etc/php-fpm.d/zz-docker.conf` inside the container) and run `make restart`.
 2. Apply the `PHP-FPM by HTTP` template or host the proxy in the Zabbix interface.
 
 ## Summary of Benefits

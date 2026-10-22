@@ -9,19 +9,15 @@ def main():
     print("──────────────────────────────")
 
     # Paths definitions
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    docs_dir = os.path.join(base_dir, 'docs')
-    docroot_dir = os.path.join(base_dir, 'docroot')
-    weblibs_dir = os.path.join(docroot_dir, 'weblibs')
+    docker_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    docs_dir = os.path.join(docker_dir, 'docs')
+    app_code_path = os.environ.get('APP_CODE_PATH', '..')
+    project_dir = os.path.abspath(os.path.join(docker_dir, app_code_path))
+    weblibs_dir = os.path.join(project_dir, 'weblibs')
     
     index_sample = os.path.join(docs_dir, 'index.php.sample')
-    target_public = os.path.join(docroot_dir, 'public')
+    target_public = os.path.join(project_dir, 'public')
     target_index = os.path.join(target_public, 'index.php')
-
-    # Ensure docroot directory exists
-    if not os.path.exists(docroot_dir):
-        print(f"📁 Creating docroot directory at: {docroot_dir}")
-        os.makedirs(docroot_dir, exist_ok=True)
 
     # Ensure weblibs directory exists
     if not os.path.exists(weblibs_dir):
@@ -93,7 +89,7 @@ def main():
         f.write(new_index_content)
     print(f"  🎉 Created/Updated: {target_index}")
     print("──────────────────────────────")
-    print("✅ Setup complete! index.php initialized in docroot/public/.")
+    print("✅ Setup complete! index.php initialized in public/.")
 
 if __name__ == '__main__':
     main()

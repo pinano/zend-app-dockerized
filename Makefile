@@ -222,7 +222,7 @@ $(MAKECMDGOALS):
 				;; \
 			"crontab-init") \
 				printf "$(BOLD)make crontab-init$(RESET)\n" ; \
-				printf "  Create an example crontab file under 'docker/scripts/crontab' if it does not exist.\n" ; \
+				printf "  Create an example crontab file under 'scripts/crontab' if it does not exist.\n" ; \
 				;; \
 			"release") \
 				printf "$(BOLD)make release$(RESET)\n" ; \
@@ -255,10 +255,10 @@ $(MAKECMDGOALS):
 				;; \
 			"setup-index") \
 				printf "$(BOLD)make setup-index$(RESET)\n" ; \
-				printf "  Generate/update Zend Framework legacy public/index.php in docroot/.\n" ; \
+				printf "  Generate/update Zend Framework legacy public/index.php in project root (../).\n" ; \
 				printf "  This command will:\n" ; \
-				printf "    1. Create docroot/public/ if it doesn't exist.\n" ; \
-				printf "    2. Scan docroot/weblibs/ for libraries and update index.php's include paths.\n" ; \
+				printf "    1. Create ../public/ if it doesn't exist.\n" ; \
+				printf "    2. Scan ../weblibs/ for libraries and update index.php's include paths.\n" ; \
 				printf "    3. Create backup file (.bak) of existing index.php configuration.\n" ; \
 				;; \
 			"composer") \
@@ -289,7 +289,7 @@ help:
 	@printf "For detailed help on any command, run: make <target> help\n\n"
 	@printf "$(BOLD)General$(RESET)\n"
 	@printf "  $(CYAN)help$(RESET)          Show this help message\n"
-	@printf "  $(CYAN)setup-index$(RESET)   Generate/update public/index.php in docroot/public/\n"
+	@printf "  $(CYAN)setup-index$(RESET)   Generate/update public/index.php in ../public/\n"
 	@printf "  $(CYAN)doctor$(RESET)        Run diagnostic checks (port conflicts, host transparent huge pages)\n"
 	@printf "  $(CYAN)status$(RESET)        Show stack status (docker compose ps)\n"
 	@printf "  $(CYAN)services$(RESET)      List available services\n"
@@ -347,14 +347,14 @@ help:
 
 .PHONY: setup-index
 setup-index:
-	@$(PYTHON) docker/scripts/setup-index.py
+	@$(PYTHON) scripts/setup-index.py
 
 .PHONY: init
 init:
-	@mkdir -p docroot/public docroot/weblibs docroot/application
+	@mkdir -p ../public ../weblibs ../application
 	@if [ ! -f .env ]; then \
-		chmod +x docker/scripts/init-env.sh; \
-		./docker/scripts/init-env.sh; \
+		chmod +x scripts/init-env.sh; \
+		./scripts/init-env.sh; \
 	else \
 		echo "ℹ️  .env already exists."; \
 	fi
@@ -376,20 +376,20 @@ venv:
 
 .PHONY: start
 start:
-	@mkdir -p docroot/public docroot/weblibs docroot/application
+	@mkdir -p ../public ../weblibs ../application
 	@if [ ! -f .env ]; then \
 		$(MAKE) --no-print-directory init || exit 1; \
 	else \
 		$(MAKE) --no-print-directory sync || exit 1; \
 	fi
 	@$(MAKE) --no-print-directory validate
-	@PROJ_NAME=$$(. ./docker/scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
+	@PROJ_NAME=$$(. ./scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
 	if [ -n "$$PROJ_NAME" ]; then \
 		docker volume rm $${PROJ_NAME}_app_tmp >/dev/null 2>&1 || true; \
 	fi
 	@docker network inspect traefik >/dev/null 2>&1 || docker network create traefik >/dev/null 2>&1 || true
 	@echo "🐳 Starting containers..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose up -d --remove-orphans
+	@. ./scripts/set-env-vars.sh && docker compose up -d --remove-orphans
 	@echo "✅ Stack is up!"
 
 .PHONY: validate
@@ -450,8 +450,8 @@ validate:
 .PHONY: stop
 stop: _ensure_env
 	@echo "🛑 Stopping containers..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose down --remove-orphans
-	@PROJ_NAME=$$(. ./docker/scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
+	@. ./scripts/set-env-vars.sh && docker compose down --remove-orphans
+	@PROJ_NAME=$$(. ./scripts/set-env-vars.sh && docker compose config | grep '^name:' | cut -d' ' -f2); \
 	if [ -n "$$PROJ_NAME" ]; then \
 		docker volume rm $${PROJ_NAME}_app_tmp >/dev/null 2>&1 || true; \
 	fi
@@ -465,54 +465,54 @@ restart:
 
 .PHONY: status
 status: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose ps
+	@. ./scripts/set-env-vars.sh && docker compose ps
 
 .PHONY: services
 services: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose config --services
+	@. ./scripts/set-env-vars.sh && docker compose config --services
 
 .PHONY: sync
 sync: _ensure_env
 	@echo "🔄 Synchronizing .env with .env.dist..."
-	@$(PYTHON) docker/scripts/sync-env.py
+	@$(PYTHON) scripts/sync-env.py
 
 .PHONY: logs logs-apache logs-php logs-zend logs-slow
 logs: _ensure_env
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
-	. ./docker/scripts/set-env-vars.sh && docker compose logs -f $$SERVICE
+	. ./scripts/set-env-vars.sh && docker compose logs -f $$SERVICE
 
 logs-apache: _ensure_env
 	@echo "📋 Tailing Apache logs (Access & Error)..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose logs -f app
+	@. ./scripts/set-env-vars.sh && docker compose logs -f app
 
 logs-php: _ensure_env
 	@echo "📋 Tailing PHP-FPM error log..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/php_errors.log
+	@. ./scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/tmp/php_errors.log
 
 logs-zend: _ensure_env
 	@echo "📋 Tailing Zend Framework application log..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/application/logs/error.log
+	@. ./scripts/set-env-vars.sh && docker compose exec app tail -n 100 -f /var/www/html/application/logs/error.log
 
 logs-slow: _ensure_env
 	@echo "📋 Tailing PHP-FPM slow log (requests exceeding PHP_FPM_SLOWLOG_TIMEOUT)..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec app tail -n 50 -f /var/www/html/tmp/php-fpm-slow.log
+	@. ./scripts/set-env-vars.sh && docker compose exec app tail -n 50 -f /var/www/html/tmp/php-fpm-slow.log
 
 .PHONY: shell
 shell: _ensure_env
 	@SERVICE="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$SERVICE" ]; then SERVICE="app"; fi; \
-	. ./docker/scripts/set-env-vars.sh && docker compose exec $$SERVICE sh -c 'if command -v bash >/dev/null 2>&1; then exec bash; else exec sh; fi'
+	. ./scripts/set-env-vars.sh && docker compose exec $$SERVICE sh -c 'if command -v bash >/dev/null 2>&1; then exec bash; else exec sh; fi'
 
 .PHONY: pull
 pull: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose pull
+	@. ./scripts/set-env-vars.sh && docker compose pull
 
 .PHONY: clean
 clean: _ensure_env
 	@printf "⚠️  WARNING: This will remove containers, networks, and VOLUMES. Are you sure? [y/N] " && read ans && \
 	case "$$ans" in \
 		[yY]|[yY][eE][sS]) \
-			. ./docker/scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
+			. ./scripts/set-env-vars.sh && docker compose down -v --remove-orphans; \
 			echo "🧹 Clean complete."; \
 			;; \
 		*) \
@@ -522,11 +522,11 @@ clean: _ensure_env
 
 .PHONY: config
 config: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose config
+	@. ./scripts/set-env-vars.sh && docker compose config
 
 .PHONY: rebuild
 rebuild: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose build $(filter-out $@,$(MAKECMDGOALS))
+	@. ./scripts/set-env-vars.sh && docker compose build $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: db
 db: _ensure_env
@@ -546,17 +546,17 @@ db: _ensure_env
 		case "$$FILE" in \
 			*.gz) \
 				if command -v pv >/dev/null 2>&1; then \
-					. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
 				else \
 					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-					. ./docker/scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
 				fi ;; \
 			*) \
 				if command -v pv >/dev/null 2>&1; then \
-					. ./docker/scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
 				else \
 					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-					. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
+					. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
 				fi ;; \
 		esac; \
 		echo "✅ Import complete!"; \
@@ -568,10 +568,10 @@ db: _ensure_env
 		echo "📤 Exporting database to $$FILENAME..."; \
 		set -eo pipefail; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
+			. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./docker/scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
+			. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
 		fi; \
 		if [ ! -s "$$FILENAME" ]; then \
 			rm -f "$$FILENAME"; \
@@ -584,13 +584,13 @@ db: _ensure_env
 		exit 1; \
 	else \
 		echo "🔌 Connecting to database..."; \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+		. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
 	fi
 
 .PHONY: db-root
 db-root: _ensure_env
 	@echo "🔌 Connecting to database as root..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_ROOT_PASS} db mariadb -u root $${DB_NAME}
+	@. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_ROOT_PASS} db mariadb -u root $${DB_NAME}
 
 .PHONY: ctop
 ctop:
@@ -604,7 +604,7 @@ ctop:
 .PHONY: php-info
 php-info: _ensure_env
 	@echo "🔍 Active PHP/FPM Configuration (via HTTP request to the running pool):"
-	@. ./docker/scripts/set-env-vars.sh && \
+	@. ./scripts/set-env-vars.sh && \
 		DOC_ROOT=$$(docker compose exec -T app printenv APACHE_DOCUMENT_ROOT 2>/dev/null | tr -d '\r' || echo "/var/www/html/public") && \
 		docker compose exec -T app sh -c "echo '<?php echo \"date.timezone=\" . ini_get(\"date.timezone\") . \"\\n\"; echo \"error_log=\" . ini_get(\"error_log\") . \"\\n\"; echo \"error_reporting=\" . ini_get(\"error_reporting\") . \"\\n\"; echo \"display_errors=\" . ini_get(\"display_errors\") . \"\\n\"; echo \"log_errors=\" . ini_get(\"log_errors\") . \"\\n\"; echo \"max_input_vars=\" . ini_get(\"max_input_vars\") . \"\\n\"; echo \"memory_limit=\" . ini_get(\"memory_limit\") . \"\\n\"; echo \"realpath_cache_size=\" . ini_get(\"realpath_cache_size\") . \"\\n\"; echo \"opcache.enable=\" . ini_get(\"opcache.enable\") . \"\\n\"; echo \"opcache.memory_consumption=\" . ini_get(\"opcache.memory_consumption\") . \"\\n\"; echo \"opcache.interned_strings_buffer=\" . ini_get(\"opcache.interned_strings_buffer\") . \"\\n\"; echo \"opcache.validate_timestamps=\" . ini_get(\"opcache.validate_timestamps\") . \"\\n\"; echo \"opcache.revalidate_freq=\" . ini_get(\"opcache.revalidate_freq\") . \"\\n\"; echo \"extension.redis=\" . (extension_loaded(\"redis\") ? \"loaded\" : \"NOT loaded\") . \"\\n\";' > \"$$DOC_ROOT/phpinfo_temp.php\"" && \
 		(docker compose exec -T app curl -sf http://localhost:8080/phpinfo_temp.php || echo "❌ Failed to query phpinfo script"); \
@@ -613,17 +613,17 @@ php-info: _ensure_env
 .PHONY: opcache-clear
 opcache-clear: _ensure_env
 	@echo "🧹 Clearing OPcache (PHP-FPM)..."
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > "$${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php"'
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app curl -s http://localhost:8080/opcache_reset_temp.php || echo "❌ Failed to query OPcache reset script"
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec -T app rm -f "$${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php"
+	@. ./scripts/set-env-vars.sh && docker compose exec -T app sh -c 'echo "<?php opcache_reset(); echo \"OPcache cleared\n\";" > "$${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php"'
+	@. ./scripts/set-env-vars.sh && docker compose exec -T app curl -s http://localhost:8080/opcache_reset_temp.php || echo "❌ Failed to query OPcache reset script"
+	@. ./scripts/set-env-vars.sh && docker compose exec -T app rm -f "$${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/opcache_reset_temp.php"
 
 .PHONY: composer
 composer: _ensure_env
 	@ARGS="$(filter-out $@,$(MAKECMDGOALS))"; \
 	if [ -z "$$ARGS" ]; then \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data -e COMPOSER_HOME=/var/www/html/tmp/composer -e COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache app composer list; \
+		. ./scripts/set-env-vars.sh && docker compose exec -u www-data -e COMPOSER_HOME=/var/www/html/tmp/composer -e COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache app composer list; \
 	else \
-		. ./docker/scripts/set-env-vars.sh && docker compose exec -u www-data -e COMPOSER_HOME=/var/www/html/tmp/composer -e COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache app composer $$ARGS; \
+		. ./scripts/set-env-vars.sh && docker compose exec -u www-data -e COMPOSER_HOME=/var/www/html/tmp/composer -e COMPOSER_CACHE_DIR=/var/www/html/tmp/composer/cache app composer $$ARGS; \
 	fi
 
 .PHONY: doctor
@@ -652,8 +652,8 @@ doctor: _ensure_env
 	DB_BIND=$${DB_BIND:-172.17.0.1}; \
 	SFTP_BIND=$$(grep '^SFTP_BIND_IP=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	SFTP_BIND=$${SFTP_BIND:-127.0.0.1}; \
-	DB_CID=$$(. ./docker/scripts/set-env-vars.sh && docker compose ps -q db 2>/dev/null || true); \
-	SFTP_CID=$$(. ./docker/scripts/set-env-vars.sh && docker compose ps -q sftp 2>/dev/null || true); \
+	DB_CID=$$(. ./scripts/set-env-vars.sh && docker compose ps -q db 2>/dev/null || true); \
+	SFTP_CID=$$(. ./scripts/set-env-vars.sh && docker compose ps -q sftp 2>/dev/null || true); \
 	DB_OWNED=0; \
 	SFTP_OWNED=0; \
 	if [ -n "$$DB_CID" ] && docker port "$$DB_CID" 2>/dev/null | grep -q ":$$DB_PORT"; then DB_OWNED=1; fi; \
@@ -773,33 +773,33 @@ close-sftp: _ensure_env
 
 .PHONY: redis-info
 redis-info: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli info
+	@. ./scripts/set-env-vars.sh && docker compose exec redis valkey-cli info
 
 .PHONY: redis-monitor
 redis-monitor: _ensure_env
 	@echo "📡 Monitoring Redis commands... (Press Ctrl+C to stop)"
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli monitor
+	@. ./scripts/set-env-vars.sh && docker compose exec redis valkey-cli monitor
 
 .PHONY: redis-ping
 redis-ping: _ensure_env
-	@. ./docker/scripts/set-env-vars.sh && docker compose exec redis valkey-cli ping
+	@. ./scripts/set-env-vars.sh && docker compose exec redis valkey-cli ping
 
 # --- Versioning & Updates ---
 .PHONY: release
 release:
-	@./docker/scripts/release.sh
+	@./scripts/release.sh
 
 .PHONY: update
 update:
-	@./docker/scripts/update.sh $(version)
+	@./scripts/update.sh $(version)
 
 .PHONY: rollback
 rollback:
-	@./docker/scripts/rollback.sh
+	@./scripts/rollback.sh
 
 .PHONY: check-updates
 check-updates:
-	@$(PYTHON) ./docker/scripts/check-image-updates.py
+	@$(PYTHON) ./scripts/check-image-updates.py
 
 # --- Sizing Profiles ---
 # Helper function to update a variable in .env (works on both macOS and Linux)
@@ -1057,16 +1057,16 @@ size-show: _ensure_env
 
 .PHONY: crontab-init
 crontab-init:
-	@if [ ! -f docker/scripts/crontab ]; then \
-		mkdir -p docker/scripts; \
-		echo "# -----------------------------------------" > docker/scripts/crontab; \
-		echo "# Application Scheduled Tasks (Cronjobs)" >> docker/scripts/crontab; \
-		echo "# -----------------------------------------" >> docker/scripts/crontab; \
-		echo "# minute hour day month weekday USERNAME command" >> docker/scripts/crontab; \
-		echo "# * * * * * www-data php /var/www/html/scripts/cron.php" >> docker/scripts/crontab; \
-		echo "*/15 * * * * root /usr/local/bin/maintenance.sh > /proc/1/fd/1 2>&1" >> docker/scripts/crontab; \
-		echo "" >> docker/scripts/crontab; \
-		echo "✅ Created example crontab at docker/scripts/crontab"; \
+	@if [ ! -f scripts/crontab ]; then \
+		mkdir -p scripts; \
+		echo "# -----------------------------------------" > scripts/crontab; \
+		echo "# Application Scheduled Tasks (Cronjobs)" >> scripts/crontab; \
+		echo "# -----------------------------------------" >> scripts/crontab; \
+		echo "# minute hour day month weekday USERNAME command" >> scripts/crontab; \
+		echo "# * * * * * www-data php /var/www/html/scripts/cron.php" >> scripts/crontab; \
+		echo "*/15 * * * * root /usr/local/bin/maintenance.sh > /proc/1/fd/1 2>&1" >> scripts/crontab; \
+		echo "" >> scripts/crontab; \
+		echo "✅ Created example crontab at scripts/crontab"; \
 	else \
 		echo "ℹ️  crontab file already exists."; \
 	fi

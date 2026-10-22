@@ -51,7 +51,7 @@ RUN usermod -o -u ${USER_ID} www-data && \
 
 # --- APP INITIALIZATION ---
 # Copy the maintenance script
-COPY docker/scripts/maintenance.sh /usr/local/bin/maintenance.sh
+COPY scripts/maintenance.sh /usr/local/bin/maintenance.sh
 RUN chmod +x /usr/local/bin/maintenance.sh
 
 # Install the same PHP extensions as the main app image

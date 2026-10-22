@@ -11,13 +11,13 @@ if [ -f ".env" ]; then
   ENV_PATH="./.env"
 elif [ -n "$BASH_SOURCE" ]; then
   SCRIPT_PATH="${BASH_SOURCE[0]}"
-  PROJECT_ROOT="$(cd "$(dirname "$(dirname "$(dirname "$SCRIPT_PATH")")")" && pwd)"
+  PROJECT_ROOT="$(cd "$(dirname "$(dirname "$SCRIPT_PATH")")" && pwd)"
   ENV_PATH="${PROJECT_ROOT}/.env"
 else
   # Fallback for shells like dash which don't support BASH_SOURCE
   SCRIPT_PATH="$0"
   if [ -f "$SCRIPT_PATH" ]; then
-    PROJECT_ROOT="$(cd "$(dirname "$(dirname "$(dirname "$SCRIPT_PATH")")")" && pwd)"
+    PROJECT_ROOT="$(cd "$(dirname "$(dirname "$SCRIPT_PATH")")" && pwd)"
     ENV_PATH="${PROJECT_ROOT}/.env"
   else
     # Last resort fallback to current directory
