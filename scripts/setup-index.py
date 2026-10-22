@@ -11,7 +11,20 @@ def main():
     # Paths definitions
     docker_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     docs_dir = os.path.join(docker_dir, 'docs')
-    app_code_path = os.environ.get('APP_CODE_PATH', '..')
+    
+    app_code_path = os.environ.get('APP_CODE_PATH')
+    if not app_code_path:
+        env_file = os.path.join(docker_dir, '.env')
+        if os.path.exists(env_file):
+            with open(env_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith('APP_CODE_PATH='):
+                        app_code_path = line.split('=', 1)[1].strip('\'" \t')
+                        break
+    if not app_code_path:
+        app_code_path = '..'
+
     project_dir = os.path.abspath(os.path.join(docker_dir, app_code_path))
     weblibs_dir = os.path.join(project_dir, 'weblibs')
     

@@ -346,8 +346,8 @@ help:
 	@printf "\n"
 
 .PHONY: setup-index
-setup-index:
-	@$(PYTHON) scripts/setup-index.py
+setup-index: _ensure_env
+	@. ./scripts/set-env-vars.sh && $(PYTHON) scripts/setup-index.py
 
 .PHONY: init
 init:
