@@ -159,18 +159,18 @@ prompt_var "PHP_VERSION" "PHP_VERSION" "$dist_php" "The PHP execution engine ver
 # 5. MARIADB_VERSION
 echo -e "\n${BOLD}${CYAN}👉 MARIADB_VERSION${RESET}"
 echo -e "${GRAY}Select the MariaDB database engine version for this project:${RESET}"
-echo -e "  ${BOLD}1)${RESET} 12.3.3  ${GRAY}(Latest rolling release)${RESET}"
-echo -e "  ${BOLD}2)${RESET} 11.4    ${GRAY}(Current Long Term Support - LTS)${RESET}"
-echo -e "  ${BOLD}3)${RESET} 10.11   ${GRAY}(LTS - High compatibility with legacy MySQL 5.7 / ZF1 apps)${RESET}"
-echo -e "  ${BOLD}4)${RESET} 10.6    ${GRAY}(Legacy LTS - Maximum backward compatibility)${RESET}"
-echo -e "  ${GRAY}Or type any custom MariaDB tag (e.g., 10.5, 11.2, etc.)${RESET}"
+echo -e "  ${BOLD}1)${RESET} 12.3.3   ${GRAY}(Latest rolling release)${RESET}"
+echo -e "  ${BOLD}2)${RESET} 10.2.44  ${GRAY}(Legacy MariaDB 10.2.X - Maximum ZF1 / MySQL 5.x compatibility)${RESET}"
+echo -e "  ${BOLD}3)${RESET} 11.4     ${GRAY}(Current Long Term Support - LTS)${RESET}"
+echo -e "  ${BOLD}4)${RESET} 10.11    ${GRAY}(LTS - High compatibility with legacy MySQL 5.7 apps)${RESET}"
+echo -e "  ${GRAY}Or type any custom MariaDB tag (e.g., 10.6, 10.5, etc.)${RESET}"
 
 read -r -p "Select option [1-4] or enter version [${dist_mariadb}]: " user_mdb_input
 case "${user_mdb_input:-$dist_mariadb}" in
     1) MARIADB_VERSION="12.3.3" ;;
-    2) MARIADB_VERSION="11.4" ;;
-    3) MARIADB_VERSION="10.11" ;;
-    4) MARIADB_VERSION="10.6" ;;
+    2) MARIADB_VERSION="10.2.44" ;;
+    3) MARIADB_VERSION="11.4" ;;
+    4) MARIADB_VERSION="10.11" ;;
     *) MARIADB_VERSION="${user_mdb_input:-$dist_mariadb}" ;;
 esac
 set_env_var "MARIADB_VERSION" "$MARIADB_VERSION"

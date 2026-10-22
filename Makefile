@@ -23,6 +23,10 @@ else
     PYTHON := python3
 endif
 
+# Database client commands (compatible with modern MariaDB 10.5+ and legacy MariaDB 10.2/10.4)
+DB_CLI  := sh -c 'if command -v mariadb >/dev/null 2>&1; then exec mariadb "$$$$@"; else exec mysql "$$$$@"; fi' --
+DB_DUMP := sh -c 'if command -v mariadb-dump >/dev/null 2>&1; then exec mariadb-dump "$$$$@"; else exec mysqldump "$$$$@"; fi' --
+
 # Detect if 'help' is one of the goals, and there is at least one other goal.
 # E.g., 'make start help' or 'make help start'.
 SHOW_HELP :=
@@ -546,17 +550,17 @@ db: _ensure_env
 		case "$$FILE" in \
 			*.gz) \
 				if command -v pv >/dev/null 2>&1; then \
-					. ./scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
 				else \
 					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-					. ./scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
 				fi ;; \
 			*) \
 				if command -v pv >/dev/null 2>&1; then \
-					. ./scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
 				else \
 					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-					. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
+					. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
 				fi ;; \
 		esac; \
 		echo "✅ Import complete!"; \
@@ -568,10 +572,10 @@ db: _ensure_env
 		echo "📤 Exporting database to $$FILENAME..."; \
 		set -eo pipefail; \
 		if command -v pv >/dev/null 2>&1; then \
-			. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
+			. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_DUMP) --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' | pv > "$$FILENAME"; \
 		else \
 			echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress tracker during exports."; \
-			. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db mariadb-dump --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
+			. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_DUMP) --single-transaction --quick -u $${DB_USER} $${DB_NAME} | sed 's/DEFINER[[:space:]]*=[[:space:]]*[^*]*\*/\*/g' > "$$FILENAME"; \
 		fi; \
 		if [ ! -s "$$FILENAME" ]; then \
 			rm -f "$$FILENAME"; \
@@ -584,13 +588,13 @@ db: _ensure_env
 		exit 1; \
 	else \
 		echo "🔌 Connecting to database..."; \
-		. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_PASS} db mariadb -u $${DB_USER} $${DB_NAME}; \
+		. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
 	fi
 
 .PHONY: db-root
 db-root: _ensure_env
 	@echo "🔌 Connecting to database as root..."
-	@. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_ROOT_PASS} db mariadb -u root $${DB_NAME}
+	@. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_ROOT_PASS} db $(DB_CLI) -u root $${DB_NAME}
 
 .PHONY: ctop
 ctop:

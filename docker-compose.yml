@@ -199,7 +199,7 @@ services:
         reservations:
           memory: ${DB_MEMORY_RESERVATION:-128M}
     healthcheck:
-      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      test: [ "CMD-SHELL", "healthcheck.sh --connect --innodb_initialized 2>/dev/null || mysqladmin ping -h 127.0.0.1 -u root -p$${DB_ROOT_PASS} 2>/dev/null || exit 1" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -219,6 +219,11 @@ services:
       MARIADB_DATABASE: ${DB_NAME}
       MARIADB_USER: ${DB_USER}
       MARIADB_PASSWORD: ${DB_PASS}
+      # Compatibility fallbacks for legacy MariaDB < 10.5 (e.g. 10.2.x)
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
     restart: unless-stopped
     networks:
       - backnet
