@@ -93,9 +93,26 @@ def main():
 
     # Write target index.php
     os.makedirs(target_public, exist_ok=True)
+    force = '--force' in sys.argv or '-f' in sys.argv
+    if os.path.exists(target_index) and not force:
+        print(f"  ℹ️  Found existing index.php at: {target_index}")
+        # If running interactively, ask the user before overwriting
+        if sys.stdin.isatty():
+            answer = input("  ❓ An index.php already exists in public/. Do you want to overwrite it? (y/N): ").strip().lower()
+            if answer not in ('y', 'yes'):
+                print("  🛡️  Keeping existing public/index.php untouched.")
+                print("──────────────────────────────")
+                print("✅ Setup finished. Existing index.php was preserved.")
+                return
+        else:
+            print("  🛡️  Preserving existing public/index.php (run with --force to overwrite).")
+            print("──────────────────────────────")
+            print("✅ Setup finished. Existing index.php was preserved.")
+            return
+
     if os.path.exists(target_index):
         backup_path = target_index + '.bak'
-        print(f"  ⚠️ File already exists. Backing up existing index.php to {os.path.basename(backup_path)}")
+        print(f"  ⚠️  Backing up existing index.php to {os.path.basename(backup_path)}")
         shutil.copy2(target_index, backup_path)
         
     with open(target_index, 'w') as f:

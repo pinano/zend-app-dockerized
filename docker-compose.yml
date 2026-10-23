@@ -38,6 +38,8 @@ services:
       GROUP_ID: ${GROUP_ID}
       COMPOSER_HOME: /var/www/html/tmp/composer
       COMPOSER_CACHE_DIR: /var/www/html/tmp/composer/cache
+      APP_ENV: ${APP_ENV:-development}
+      APP_ENV_ZEND_INI: ${APP_ENV_ZEND_INI:-}
       # Apache
       APACHE_DOCUMENT_ROOT: ${APACHE_DOCUMENT_ROOT:-/var/www/html/public}
       APACHE_PROXY_TIMEOUT: ${APACHE_PROXY_TIMEOUT:-300}
@@ -137,6 +139,7 @@ services:
       USER_ID: ${USER_ID}
       GROUP_ID: ${GROUP_ID}
       APP_ENV: ${APP_ENV:-development}
+      APP_ENV_ZEND_INI: ${APP_ENV_ZEND_INI:-}
       LOG_OUTPUT_LEVEL: ${LOG_OUTPUT_LEVEL:-warn}
       COMPOSER_HOME: /var/www/html/tmp/composer
       COMPOSER_CACHE_DIR: /var/www/html/tmp/composer/cache

@@ -153,6 +153,18 @@ prompt_var "PROJECT_NAME" "PROJECT_NAME" "$default_pname" "The name of the proje
 # 3. APP_ENV
 prompt_var "APP_ENV" "APP_ENV" "development" "Application environment mode. Options: development, staging, production."
 
+# 3b. APP_ENV_ZEND_INI (Optional)
+echo -e "\n${BOLD}${CYAN}👉 APP_ENV_ZEND_INI (Optional)${RESET}"
+echo -e "${GRAY}Custom section in application.ini (e.g., dev-juanjo). Press Enter to leave empty and use APP_ENV:${RESET}"
+read -r -p "Enter Zend application.ini environment []: " user_zend_ini
+if [[ -n "$user_zend_ini" ]]; then
+    set_env_var "APP_ENV_ZEND_INI" "$user_zend_ini"
+    echo -e "${GREEN}✓ APP_ENV_ZEND_INI set to: ${user_zend_ini}${RESET}"
+else
+    set_env_var "APP_ENV_ZEND_INI" ""
+    echo -e "${GREEN}✓ APP_ENV_ZEND_INI left empty (will default to APP_ENV)${RESET}"
+fi
+
 # 4. PHP_VERSION
 prompt_var "PHP_VERSION" "PHP_VERSION" "$dist_php" "The PHP execution engine version to run in the application container (e.g., 5.6, 7.4, 8.5)."
 

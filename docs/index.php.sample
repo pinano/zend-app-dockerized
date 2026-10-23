@@ -14,7 +14,10 @@ if (!function_exists('getenv_docker')) {
 }
 
 // Env constants
-define('APPLICATION_ENV', getenv_docker('APP_ENV', 'production'));
+// APPLICATION_ENV prioritizes APP_ENV_ZEND_INI (custom section in application.ini) if defined,
+// otherwise falls back to APP_ENV (e.g. development/production).
+$zendIniEnv = getenv_docker('APP_ENV_ZEND_INI', '');
+define('APPLICATION_ENV', !empty($zendIniEnv) ? $zendIniEnv : getenv_docker('APP_ENV', 'production'));
 
 // Base routes
 define('ROOT_DIR', realpath(__DIR__ . '/..'));

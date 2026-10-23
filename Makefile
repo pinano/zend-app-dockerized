@@ -351,7 +351,7 @@ help:
 
 .PHONY: setup-index
 setup-index: _ensure_env
-	@. ./scripts/set-env-vars.sh && $(PYTHON) scripts/setup-index.py
+	@. ./scripts/set-env-vars.sh && $(PYTHON) scripts/setup-index.py $(filter-out $@,$(MAKECMDGOALS))
 
 .PHONY: init
 init:
