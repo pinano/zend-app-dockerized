@@ -398,9 +398,16 @@ start:
 
 .PHONY: validate
 validate:
-	@echo "Validating .env configuration..."
-	@[ -n "$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1)" ] || \
-		(echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1)
+	@PNAME=$$(grep '^PROJECT_NAME=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
+	if [ -z "$$PNAME" ]; then \
+		echo "❌ ERROR: PROJECT_NAME is not set!"; exit 1; \
+	fi; \
+	case "$$PNAME" in \
+		*_*) echo "❌ ERROR: PROJECT_NAME ($$PNAME) cannot contain underscores (_). Use hyphens (-) instead."; exit 1 ;; \
+	esac; \
+	case "$$PNAME" in \
+		*[!a-z0-9-]*) echo "❌ ERROR: PROJECT_NAME ($$PNAME) must contain only lowercase alphanumeric characters and hyphens (-)."; exit 1 ;; \
+	esac
 	@PID=$$(grep '^PROJECT_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	if [ -z "$$PID" ]; then \
 		echo "❌ ERROR: PROJECT_ID is not set!"; exit 1; \

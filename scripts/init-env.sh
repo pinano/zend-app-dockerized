@@ -128,8 +128,9 @@ if [[ "$dir_name" =~ ^([0-9]+)-(.*)$ ]]; then
     default_pid="${BASH_REMATCH[1]}"
     default_pname="${BASH_REMATCH[2]}"
 else
-    default_pname=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9_-]//g')
+    default_pname=$(echo "$dir_name" | tr '[:upper:]' '[:lower:]' | tr '_' '-' | sed 's/[^a-z0-9-]//g')
 fi
+default_pname=$(echo "$default_pname" | tr '_' '-')
 
 # Load existing PHP_VERSION and MARIADB_VERSION in dist as default fallbacks
 dist_php=$(grep '^PHP_VERSION=' "$DIST_FILE" | cut -d'=' -f2 | tr -d '"'\''\r ' || echo "8.5")
@@ -148,7 +149,16 @@ while true; do
 done
 
 # 2. PROJECT_NAME
-prompt_var "PROJECT_NAME" "PROJECT_NAME" "$default_pname" "The name of the project. Used for container hostnaming, service names, and logs."
+while true; do
+    prompt_var "PROJECT_NAME" "PROJECT_NAME" "$default_pname" "The name of the project. Used for container names, networks, and Traefik domains. Use lowercase letters, numbers, and hyphens (-) only. Do NOT use underscores (_)."
+    if [[ "$PROJECT_NAME" =~ _ ]]; then
+        echo -e "${BOLD}${YELLOW}❌ Error: PROJECT_NAME cannot contain underscores (_). Use hyphens (-) instead (e.g., 'my-app' instead of 'my_app').${RESET}"
+    elif [[ ! "$PROJECT_NAME" =~ ^[a-z0-9-]+$ ]]; then
+        echo -e "${BOLD}${YELLOW}❌ Error: PROJECT_NAME must contain only lowercase alphanumeric characters and hyphens (-).${RESET}"
+    else
+        break
+    fi
+done
 
 # 3. APP_ENV
 prompt_var "APP_ENV" "APP_ENV" "development" "Application environment mode. Options: development, staging, production."
