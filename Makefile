@@ -24,8 +24,8 @@ else
 endif
 
 # Database client commands (compatible with modern MariaDB 10.5+ and legacy MariaDB 10.2/10.4)
-DB_CLI  := sh -c 'if command -v mariadb >/dev/null 2>&1; then exec mariadb "$$$$@"; else exec mysql "$$$$@"; fi' --
-DB_DUMP := sh -c 'if command -v mariadb-dump >/dev/null 2>&1; then exec mariadb-dump "$$$$@"; else exec mysqldump "$$$$@"; fi' --
+DB_CLI  := sh -c 'if command -v mariadb >/dev/null 2>&1; then exec mariadb "$$@"; else exec mysql "$$@"; fi' sh
+DB_DUMP := sh -c 'if command -v mariadb-dump >/dev/null 2>&1; then exec mariadb-dump "$$@"; else exec mysqldump "$$@"; fi' sh
 
 # Detect if 'help' is one of the goals, and there is at least one other goal.
 # E.g., 'make start help' or 'make help start'.
