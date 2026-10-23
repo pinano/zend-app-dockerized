@@ -550,18 +550,25 @@ db: _ensure_env
 		case "$$FILE" in \
 			*.gz) \
 				if command -v pv >/dev/null 2>&1; then \
-					. ./scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && pv "$$FILE" | gzip -dc | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) --force -u $${DB_USER} $${DB_NAME}; \
 				else \
 					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-					. ./scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && gzip -dc "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) --force -u $${DB_USER} $${DB_NAME}; \
 				fi ;; \
 			*) \
 				if command -v pv >/dev/null 2>&1; then \
-					. ./scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME}; \
+					. ./scripts/set-env-vars.sh && pv "$$FILE" | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) --force -u $${DB_USER} $${DB_NAME}; \
 				else \
 					echo "💡 Tip: Install 'pv' (e.g., brew install pv / apt install pv) to see a progress bar during imports."; \
-					. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
+					. ./scripts/set-env-vars.sh && docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) --force -u $${DB_USER} $${DB_NAME} < "$$FILE"; \
 				fi ;; \
+		esac; \
+		echo "🔄 Checking and resolving any interdependent views..."; \
+		case "$$FILE" in \
+			*.gz) \
+				. ./scripts/set-env-vars.sh && gzip -dc "$$FILE" | grep -A 2 -i "^CREATE.*VIEW" 2>/dev/null | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) --force -u $${DB_USER} $${DB_NAME} >/dev/null 2>&1 || true ;; \
+			*) \
+				. ./scripts/set-env-vars.sh && grep -A 2 -i "^CREATE.*VIEW" "$$FILE" 2>/dev/null | docker compose exec -T -e MYSQL_PWD=$${DB_PASS} db $(DB_CLI) --force -u $${DB_USER} $${DB_NAME} >/dev/null 2>&1 || true ;; \
 		esac; \
 		echo "✅ Import complete!"; \
 	elif [ "$$ACTION" = "export" ]; then \
