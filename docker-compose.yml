@@ -194,6 +194,7 @@ services:
       - --sort-buffer-size=256K
       - --tmp-table-size=32M
       - --max-heap-table-size=32M
+      - --lower_case_table_names=1
     deploy:
       resources:
         limits:
