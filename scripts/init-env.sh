@@ -178,46 +178,45 @@ fi
 # 4. PHP_VERSION
 prompt_var "PHP_VERSION" "PHP_VERSION" "$dist_php" "The PHP execution engine version to run in the application container (e.g., 5.6, 7.4, 8.5)."
 
-# 5. MARIADB_VERSION
-echo -e "\n${BOLD}${CYAN}👉 MARIADB_VERSION${RESET}"
-echo -e "${GRAY}Select the MariaDB database engine version for this project:${RESET}"
-echo -e "  ${BOLD}1)${RESET} 12.3.3   ${GRAY}(Latest rolling release)${RESET}"
-echo -e "  ${BOLD}2)${RESET} 10.2.44  ${GRAY}(Legacy MariaDB 10.2.X - Maximum ZF1 / MySQL 5.x compatibility)${RESET}"
-echo -e "  ${BOLD}3)${RESET} 11.4     ${GRAY}(Current Long Term Support - LTS)${RESET}"
-echo -e "  ${BOLD}4)${RESET} 10.11    ${GRAY}(LTS - High compatibility with legacy MySQL 5.7 apps)${RESET}"
-echo -e "  ${GRAY}Or type any custom MariaDB tag (e.g., 10.6, 10.5, etc.)${RESET}"
+# 5. COMPOSE_PROFILES
+prompt_var "COMPOSE_PROFILES" "COMPOSE_PROFILES" "db,sftp" "Orchestration profiles to enable (comma-separated). 'db' starts MariaDB, 'sftp' starts SFTP, 'cron' starts CLI scheduler, 'redis' starts Valkey cache. For PHP-only projects without database, omit 'db' (e.g. 'sftp' or leave empty)."
 
-read -r -p "Select option [1-4] or enter version [${dist_mariadb}]: " user_mdb_input
-case "${user_mdb_input:-$dist_mariadb}" in
-    1) MARIADB_VERSION="12.3.3" ;;
-    2) MARIADB_VERSION="10.2.44" ;;
-    3) MARIADB_VERSION="11.4" ;;
-    4) MARIADB_VERSION="10.11" ;;
-    *) MARIADB_VERSION="${user_mdb_input:-$dist_mariadb}" ;;
-esac
-set_env_var "MARIADB_VERSION" "$MARIADB_VERSION"
-echo -e "${GREEN}✓ MARIADB_VERSION set to: ${MARIADB_VERSION}${RESET}"
+# --- Database Configuration (MariaDB) ---
+if echo "$COMPOSE_PROFILES" | grep -E -q '(^|,)(db)(,|$)'; then
+    echo -e "\n${BOLD}${CYAN}👉 MARIADB_VERSION${RESET}"
+    echo -e "${GRAY}Select the MariaDB database engine version for this project:${RESET}"
+    echo -e "  ${BOLD}1)${RESET} 12.3.3   ${GRAY}(Latest rolling release)${RESET}"
+    echo -e "  ${BOLD}2)${RESET} 10.2.44  ${GRAY}(Legacy MariaDB 10.2.X - Maximum ZF1 / MySQL 5.x compatibility)${RESET}"
+    echo -e "  ${BOLD}3)${RESET} 11.4     ${GRAY}(Current Long Term Support - LTS)${RESET}"
+    echo -e "  ${BOLD}4)${RESET} 10.11    ${GRAY}(LTS - High compatibility with legacy MySQL 5.7 apps)${RESET}"
+    echo -e "  ${GRAY}Or type any custom MariaDB tag (e.g., 10.6, 10.5, etc.)${RESET}"
 
-# 6. COMPOSE_PROFILES
-prompt_var "COMPOSE_PROFILES" "COMPOSE_PROFILES" "sftp" "Orchestration profiles to enable. 'sftp' starts an SFTP container for secure remote file access. Use 'none' to disable auxiliary services, or separate multiple with commas."
+    read -r -p "Select option [1-4] or enter version [${dist_mariadb}]: " user_mdb_input
+    case "${user_mdb_input:-$dist_mariadb}" in
+        1) MARIADB_VERSION="12.3.3" ;;
+        2) MARIADB_VERSION="10.2.44" ;;
+        3) MARIADB_VERSION="11.4" ;;
+        4) MARIADB_VERSION="10.11" ;;
+        *) MARIADB_VERSION="${user_mdb_input:-$dist_mariadb}" ;;
+    esac
+    set_env_var "MARIADB_VERSION" "$MARIADB_VERSION"
+    echo -e "${GREEN}✓ MARIADB_VERSION set to: ${MARIADB_VERSION}${RESET}"
 
-# 7. DB_NAME
-prompt_var "DB_NAME" "DB_NAME" "$PROJECT_NAME" "The name of the database schema to automatically create on startup."
+    prompt_var "DB_NAME" "DB_NAME" "$PROJECT_NAME" "The name of the database schema to automatically create on startup."
+    prompt_var "DB_USER" "DB_USER" "$PROJECT_NAME" "The credentials username for application database access."
+    prompt_password "DB_PASS" "DB_PASS" "The secure password for the database user account."
+    prompt_password "DB_ROOT_PASS" "DB_ROOT_PASS" "The root superuser administration password for MariaDB."
+else
+    echo -e "\n${GRAY}ℹ️  'db' profile is not active in COMPOSE_PROFILES. Skipping MariaDB database configuration.${RESET}"
+fi
 
-# 8. DB_USER
-prompt_var "DB_USER" "DB_USER" "$PROJECT_NAME" "The credentials username for application database access."
-
-# 9. DB_PASS
-prompt_password "DB_PASS" "DB_PASS" "The secure password for the database user account."
-
-# 10. DB_ROOT_PASS
-prompt_password "DB_ROOT_PASS" "DB_ROOT_PASS" "The root superuser administration password for MariaDB."
-
-# 11. SFTP_USER
-prompt_var "SFTP_USER" "SFTP_USER" "$PROJECT_NAME" "The authorized username allowed to log in and upload files via SFTP."
-
-# 12. SFTP_PASS
-prompt_password "SFTP_PASS" "SFTP_PASS" "The SFTP authentication credentials password."
+# --- SFTP Configuration ---
+if echo "$COMPOSE_PROFILES" | grep -E -q '(^|,)(sftp)(,|$)'; then
+    prompt_var "SFTP_USER" "SFTP_USER" "$PROJECT_NAME" "The authorized username allowed to log in and upload files via SFTP."
+    prompt_password "SFTP_PASS" "SFTP_PASS" "The SFTP authentication credentials password."
+else
+    echo -e "\n${GRAY}ℹ️  'sftp' profile is not active in COMPOSE_PROFILES. Skipping SFTP configuration.${RESET}"
+fi
 
 echo -e "\n${BOLD}${GREEN}========================================================"
 echo -e "   ✓ .env file has been initialized successfully!"

@@ -315,8 +315,14 @@ process_project_backup() {
         db_container="${project_name}-db"
     fi
     
-    # Check if database is configured, and if docker container is running
-    if [[ -z "$db_name" || -z "$db_user" || -z "$db_pass" ]]; then
+    # Check if database is configured, enabled in profiles, and if docker container is running
+    local compose_profiles
+    compose_profiles=$(parse_env_var "$env_file" "COMPOSE_PROFILES")
+
+    if [[ -n "$compose_profiles" && ! ",${compose_profiles}," =~ ,db, ]] && ! docker ps --format '{{.Names}}' | grep -q "^${db_container}$"; then
+        log_info "Database profile 'db' is not active in COMPOSE_PROFILES. Skipping database backup."
+        db_status="⚪ N/A (Disabled)"
+    elif [[ -z "$db_name" || -z "$db_user" || -z "$db_pass" ]]; then
         log_info "No database configured (DB_NAME/DB_USER/DB_PASS not set in .env). Skipping database backup."
         db_status="⚪ N/A"
     elif ! command -v docker &> /dev/null; then

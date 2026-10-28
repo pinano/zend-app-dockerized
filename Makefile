@@ -421,40 +421,46 @@ validate:
 	if [ "33$$PID" -lt 1024 ]; then \
 		echo "⚠️  WARNING: PROJECT_ID ($$PID) produces privileged host TCP ports (< 1024: DB=33$$PID, SFTP=22$$PID). Consider using 3 digits (e.g. 00$$PID) for high ports (3300$$PID / 2200$$PID)."; \
 	fi
-	@[ -n "$$(grep '^DB_NAME=' .env | cut -d= -f2 | head -1)" ] || \
-		(echo "❌ ERROR: DB_NAME is not set!"; exit 1)
-	@[ -n "$$(grep '^DB_USER=' .env | cut -d= -f2 | head -1)" ] || \
-		(echo "❌ ERROR: DB_USER is not set!"; exit 1)
-	@[ -n "$$(grep '^DB_PASS=' .env | cut -d= -f2 | head -1)" ] || \
-		(echo "❌ ERROR: DB_PASS is not set!"; exit 1)
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		[ -n "$$(grep '^DB_NAME=' .env | cut -d= -f2 | head -1)" ] || \
+			(echo "❌ ERROR: DB_NAME is not set!"; exit 1); \
+		[ -n "$$(grep '^DB_USER=' .env | cut -d= -f2 | head -1)" ] || \
+			(echo "❌ ERROR: DB_USER is not set!"; exit 1); \
+		[ -n "$$(grep '^DB_PASS=' .env | cut -d= -f2 | head -1)" ] || \
+			(echo "❌ ERROR: DB_PASS is not set!"; exit 1); \
+		grep -q "^DB_PASS=dbrootpass" .env && \
+			echo "⚠️  WARNING: DB_PASS is using default password!" || true; \
+		grep -q "^DB_ROOT_PASS=dbrootpass" .env && \
+			echo "⚠️  WARNING: DB_ROOT_PASS is using default password!" || true; \
+		MAX_CONN=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2 | head -1); \
+		MAX_CHILDREN=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2 | head -1); \
+		if [ -n "$$MAX_CONN" ] && [ -n "$$MAX_CHILDREN" ]; then \
+			MIN_CONN=$$((MAX_CHILDREN * 3)); \
+			if [ "$$MAX_CONN" -lt "$$MIN_CONN" ]; then \
+				echo "⚠️  WARNING: DB_MAX_CONNECTIONS ($$MAX_CONN) < PHP_FPM_PM_MAX_CHILDREN × 3 ($$MIN_CONN). Some ZF1 apps open multiple DB connections per request."; \
+			fi; \
+		fi; \
+		APP_ENV=$$(grep '^APP_ENV=' .env | cut -d= -f2 | head -1); \
+		FLUSH=$$(grep '^DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT=' .env | cut -d= -f2 | head -1); \
+		if [ "$$APP_ENV" = "production" ] && [ "$$FLUSH" = "2" ]; then \
+			echo "⚠️  WARNING: DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT=2 in production risks losing up to 1s of transactions on crash. Set to 1 for full ACID compliance."; \
+		fi; \
+	fi
 	@UID_VAL=$$(grep '^USER_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	[ "$$UID_VAL" != "0" ] && [ -n "$$UID_VAL" ] || \
 		(echo "❌ ERROR: USER_ID must be set and non-zero!"; exit 1)
 	@GID_VAL=$$(grep '^GROUP_ID=' .env | cut -d= -f2 | head -1 | tr -d '"'\''\r '); \
 	[ "$$GID_VAL" != "0" ] && [ -n "$$GID_VAL" ] || \
 		(echo "❌ ERROR: GROUP_ID must be set and non-zero!"; exit 1)
-	@grep -q "^DB_PASS=dbrootpass" .env && \
-		echo "⚠️  WARNING: DB_PASS is using default password!" || true
-	@grep -q "^DB_ROOT_PASS=dbrootpass" .env && \
-		echo "⚠️  WARNING: DB_ROOT_PASS is using default password!" || true
-	@grep -q "^SFTP_PASS=sftppass" .env && \
-		echo "⚠️  WARNING: SFTP_PASS is using default password!" || true
-	@MAX_CONN=$$(grep '^DB_MAX_CONNECTIONS=' .env | cut -d= -f2 | head -1); \
-	MAX_CHILDREN=$$(grep '^PHP_FPM_PM_MAX_CHILDREN=' .env | cut -d= -f2 | head -1); \
-	if [ -n "$$MAX_CONN" ] && [ -n "$$MAX_CHILDREN" ]; then \
-		MIN_CONN=$$((MAX_CHILDREN * 3)); \
-		if [ "$$MAX_CONN" -lt "$$MIN_CONN" ]; then \
-			echo "⚠️  WARNING: DB_MAX_CONNECTIONS ($$MAX_CONN) < PHP_FPM_PM_MAX_CHILDREN × 3 ($$MIN_CONN). Some ZF1 apps open multiple DB connections per request."; \
-		fi; \
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
+		grep -q "^SFTP_PASS=sftppass" .env && \
+			echo "⚠️  WARNING: SFTP_PASS is using default password!" || true; \
 	fi
 	@TMPFS=$$(grep '^APP_TMPFS_SIZE=' .env | cut -d= -f2 | head -1 | sed 's/[Mm]$$//'); \
 	if [ -n "$$TMPFS" ] && [ "$$TMPFS" -lt 64 ]; then \
 		echo "⚠️  WARNING: APP_TMPFS_SIZE ($${TMPFS}M) is very small. Recommend at least 128M for session and cache files."; \
-	fi
-	@APP_ENV=$$(grep '^APP_ENV=' .env | cut -d= -f2 | head -1); \
-	FLUSH=$$(grep '^DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT=' .env | cut -d= -f2 | head -1); \
-	if [ "$$APP_ENV" = "production" ] && [ "$$FLUSH" = "2" ]; then \
-		echo "⚠️  WARNING: DB_INNODB_FLUSH_LOG_AT_TRX_COMMIT=2 in production risks losing up to 1s of transactions on crash. Set to 1 for full ACID compliance."; \
 	fi
 	@echo "✅ Validation passed successfully!"
 
@@ -541,7 +547,13 @@ rebuild: _ensure_env
 
 .PHONY: db
 db: _ensure_env
-	@ACTION="$(word 2,$(MAKECMDGOALS))"; \
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		echo "❌ ERROR: 'db' profile is not active in COMPOSE_PROFILES in .env."; \
+		echo "   To enable the database, add 'db' to COMPOSE_PROFILES (e.g. COMPOSE_PROFILES=db)."; \
+		exit 1; \
+	fi; \
+	ACTION="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ACTION" = "import" ]; then \
 		FILE="$(word 3,$(MAKECMDGOALS))"; \
 		if [ -z "$$FILE" ]; then \
@@ -607,6 +619,12 @@ db: _ensure_env
 
 .PHONY: db-root
 db-root: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		echo "❌ ERROR: 'db' profile is not active in COMPOSE_PROFILES in .env."; \
+		echo "   To enable the database, add 'db' to COMPOSE_PROFILES (e.g. COMPOSE_PROFILES=db)."; \
+		exit 1; \
+	fi
 	@echo "🔌 Connecting to database as root..."
 	@. ./scripts/set-env-vars.sh && docker compose exec -e MYSQL_PWD=$${DB_ROOT_PASS} db $(DB_CLI) -u root $${DB_NAME}
 
@@ -689,55 +707,67 @@ doctor: _ensure_env
 		DB_PORT_IN_USE=0; \
 		SFTP_PORT_IN_USE=0; \
 	fi; \
-	if [ "$$DB_BIND" = "0.0.0.0" ]; then \
-		if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
-			if [ "$$DB_OWNED" -eq 1 ]; then \
-				echo "✅ DB Port $$DB_PORT is OPEN externally (0.0.0.0) and in use by this project (normal)"; \
+	PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		if [ "$$DB_BIND" = "0.0.0.0" ]; then \
+			if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
+				if [ "$$DB_OWNED" -eq 1 ]; then \
+					echo "✅ DB Port $$DB_PORT is OPEN externally (0.0.0.0) and in use by this project (normal)"; \
+				else \
+					echo "⚠️  WARNING: Port $$DB_PORT is configured to be OPEN externally but is occupied by another process/project!"; \
+				fi; \
 			else \
-				echo "⚠️  WARNING: Port $$DB_PORT is configured to be OPEN externally but is occupied by another process/project!"; \
+				echo "✅ DB Port $$DB_PORT is configured to be OPEN externally (0.0.0.0) and is available"; \
 			fi; \
 		else \
-			echo "✅ DB Port $$DB_PORT is configured to be OPEN externally (0.0.0.0) and is available"; \
+			if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
+				if [ "$$DB_OWNED" -eq 1 ]; then \
+					echo "🔒 DB Port $$DB_PORT is RESTRICTED to $$DB_BIND in this project (normal)"; \
+				else \
+					echo "⚠️  WARNING: Port $$DB_PORT is restricted to $$DB_BIND but is occupied by another process/project!"; \
+				fi; \
+			else \
+				echo "🔒 DB Port $$DB_PORT is not open externally in this project (restricted to $$DB_BIND)"; \
+			fi; \
 		fi; \
 	else \
-		if [ "$$DB_PORT_IN_USE" -eq 1 ]; then \
-			if [ "$$DB_OWNED" -eq 1 ]; then \
-				echo "🔒 DB Port $$DB_PORT is RESTRICTED to $$DB_BIND in this project (normal)"; \
-			else \
-				echo "⚠️  WARNING: Port $$DB_PORT is restricted to $$DB_BIND but is occupied by another process/project!"; \
-			fi; \
-		else \
-			echo "🔒 DB Port $$DB_PORT is not open externally in this project (restricted to $$DB_BIND)"; \
-		fi; \
+		echo "ℹ️  DB Service: Disabled ('db' profile is not active in COMPOSE_PROFILES)"; \
 	fi; \
-	if [ "$$SFTP_BIND" = "0.0.0.0" ]; then \
-		if [ "$$SFTP_PORT_IN_USE" -eq 1 ]; then \
-			if [ "$$SFTP_OWNED" -eq 1 ]; then \
-				echo "✅ SFTP Port $$SFTP_PORT is OPEN externally (0.0.0.0) and in use by this project (normal)"; \
+	if echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
+		if [ "$$SFTP_BIND" = "0.0.0.0" ]; then \
+			if [ "$$SFTP_PORT_IN_USE" -eq 1 ]; then \
+				if [ "$$SFTP_OWNED" -eq 1 ]; then \
+					echo "✅ SFTP Port $$SFTP_PORT is OPEN externally (0.0.0.0) and in use by this project (normal)"; \
+				else \
+					echo "⚠️  WARNING: Port $$SFTP_PORT is configured to be OPEN externally but is occupied by another process/project!"; \
+				fi; \
 			else \
-				echo "⚠️  WARNING: Port $$SFTP_PORT is configured to be OPEN externally but is occupied by another process/project!"; \
+				echo "✅ SFTP Port $$SFTP_PORT is configured to be OPEN externally (0.0.0.0) and is available"; \
 			fi; \
 		else \
-			echo "✅ SFTP Port $$SFTP_PORT is configured to be OPEN externally (0.0.0.0) and is available"; \
+			if [ "$$SFTP_PORT_IN_USE" -eq 1 ]; then \
+				if [ "$$SFTP_OWNED" -eq 1 ]; then \
+					echo "🔒 SFTP Port $$SFTP_PORT is RESTRICTED to localhost (127.0.0.1) in this project (normal)"; \
+				else \
+					echo "⚠️  WARNING: Port $$SFTP_PORT is restricted to localhost but is occupied by another process/project!"; \
+				fi; \
+			else \
+				echo "🔒 SFTP Port $$SFTP_PORT is not open externally in this project (restricted to localhost)"; \
+			fi; \
 		fi; \
 	else \
-		if [ "$$SFTP_PORT_IN_USE" -eq 1 ]; then \
-			if [ "$$SFTP_OWNED" -eq 1 ]; then \
-				echo "🔒 SFTP Port $$SFTP_PORT is RESTRICTED to localhost (127.0.0.1) in this project (normal)"; \
-			else \
-				echo "⚠️  WARNING: Port $$SFTP_PORT is restricted to localhost but is occupied by another process/project!"; \
-			fi; \
-		else \
-			echo "🔒 SFTP Port $$SFTP_PORT is not open externally in this project (restricted to localhost)"; \
-		fi; \
+		echo "ℹ️  SFTP Service: Disabled ('sftp' profile is not active in COMPOSE_PROFILES)"; \
 	fi
 	@echo "─────────────────────────────────"
 
 .PHONY: open-ports
 open-ports: _ensure_env
 	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		echo "⚠️  WARNING: 'db' profile is not active in COMPOSE_PROFILES in .env. DB port will not be exposed."; \
+	fi; \
 	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
-		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env. Sftp port will not be exposed."; \
+		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env. SFTP port will not be exposed."; \
 	fi
 	@echo "🌐 Opening DB and SFTP ports externally (0.0.0.0)..."
 	$(call set_env,DB_BIND_IP,0.0.0.0)
@@ -747,6 +777,9 @@ open-ports: _ensure_env
 .PHONY: close-ports
 close-ports: _ensure_env
 	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		echo "⚠️  WARNING: 'db' profile is not active in COMPOSE_PROFILES in .env."; \
+	fi; \
 	if ! echo "$$PROFILES" | grep -E -q '(^|,)(sftp)(,|$$)'; then \
 		echo "⚠️  WARNING: 'sftp' profile is not active in COMPOSE_PROFILES in .env."; \
 	fi
@@ -757,12 +790,22 @@ close-ports: _ensure_env
 
 .PHONY: open-db
 open-db: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		echo "⚠️  WARNING: 'db' profile is not active in COMPOSE_PROFILES in .env."; \
+		echo "   To enable it, edit .env and add 'db' to COMPOSE_PROFILES (e.g. COMPOSE_PROFILES=db)."; \
+	fi
 	@echo "🌐 Opening DB port externally (0.0.0.0)..."
 	$(call set_env,DB_BIND_IP,0.0.0.0)
 	@echo "⚠️  DB port configured to be open. Run 'make start' to apply."
 
 .PHONY: close-db
 close-db: _ensure_env
+	@PROFILES=$$(grep '^COMPOSE_PROFILES=' .env | cut -d= -f2 | tr -d '"'\'' '); \
+	if ! echo "$$PROFILES" | grep -E -q '(^|,)(db)(,|$$)'; then \
+		echo "⚠️  WARNING: 'db' profile is not active in COMPOSE_PROFILES in .env."; \
+		echo "   To enable it, edit .env and add 'db' to COMPOSE_PROFILES (e.g. COMPOSE_PROFILES=db)."; \
+	fi
 	@echo "🔒 Restricting DB port to 172.17.0.1..."
 	$(call set_env,DB_BIND_IP,172.17.0.1)
 	@echo "✅ DB port configured to be closed. Run 'make start' to apply."

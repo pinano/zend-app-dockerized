@@ -55,22 +55,25 @@ echo "✅ Log files initialized for separate tailing."
 echo "✅ Tmp structure initialized."
 
 # --- HEALTHCHECK ---
-# Auto-generate a healthcheck.php that validates both PHP-FPM and database connectivity.
+# Auto-generate a healthcheck.php that validates PHP-FPM (and MariaDB connectivity if db profile is active).
 # This allows Docker healthchecks and Traefik to detect actual service availability,
 # not just that PHP-FPM is responding.
 HEALTHCHECK_FILE="${APACHE_DOCUMENT_ROOT:-/var/www/html/public}/healthcheck.php"
 mkdir -p "$(dirname "$HEALTHCHECK_FILE")"
-if [ ! -f "$HEALTHCHECK_FILE" ]; then
+if [ ! -f "$HEALTHCHECK_FILE" ] || grep -q "Auto-generated healthcheck" "$HEALTHCHECK_FILE"; then
     cat > "$HEALTHCHECK_FILE" <<'HEALTHCHECK_EOF'
 <?php
-// Auto-generated healthcheck — validates PHP-FPM + MariaDB connectivity.
+// Auto-generated healthcheck — validates PHP-FPM + MariaDB connectivity (if db profile is active).
 // Docker healthcheck interval is typically 60s, so one DB connection per minute is negligible.
+$profiles = array_filter(array_map('trim', explode(',', (string)getenv('COMPOSE_PROFILES'))));
+$isDbActive = in_array('db', $profiles, true);
+
 $dbHost = getenv('DB_HOST');
 $dbName = getenv('DB_NAME');
 $dbUser = getenv('DB_USER');
 $dbPass = getenv('DB_PASS');
 
-if ($dbHost && $dbName && $dbUser) {
+if ($isDbActive && $dbHost && $dbName && $dbUser) {
     try {
         $pdo = new PDO(
             'mysql:host=' . $dbHost . ';dbname=' . $dbName,
@@ -90,7 +93,7 @@ http_response_code(200);
 echo 'ok';
 HEALTHCHECK_EOF
     chown www-data:www-data "$HEALTHCHECK_FILE"
-    echo "✅ Healthcheck created at $HEALTHCHECK_FILE (with DB validation)"
+    echo "✅ Healthcheck created/updated at $HEALTHCHECK_FILE"
 else
     echo "ℹ️  Healthcheck already exists at $HEALTHCHECK_FILE, skipping."
 fi

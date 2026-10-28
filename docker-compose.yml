@@ -16,6 +16,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
     build:
       context: .
       dockerfile: Dockerfile
@@ -78,9 +79,10 @@ services:
       # Database
       DB_HOST: db
       DB_PORT: ${DB_CONTAINER_PORT:-3306}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME:-}
+      DB_USER: ${DB_USER:-}
+      DB_PASS: ${DB_PASS:-}
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
       # Redis (optional cache)
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -119,6 +121,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+        required: false
     build:
       context: .
       dockerfile: Dockerfile.cron
@@ -157,9 +160,10 @@ services:
       # Database
       DB_HOST: db
       DB_PORT: ${DB_CONTAINER_PORT:-3306}
-      DB_NAME: ${DB_NAME}
-      DB_USER: ${DB_USER}
-      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME:-}
+      DB_USER: ${DB_USER:-}
+      DB_PASS: ${DB_PASS:-}
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
       # Redis (optional cache)
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
@@ -176,6 +180,7 @@ services:
   db:
     image: mariadb:${MARIADB_VERSION:-12.3.3}
     container_name: ${PROJECT_NAME}-db
+    profiles: [ "db" ]
     command:
       # sql_mode: STRICT_TRANS_TABLES intentionally omitted for legacy ZF1 compatibility.
       # Legacy apps written for MySQL 5.x rely on implicit type conversions and silent truncation.

@@ -94,6 +94,7 @@ For detailed sizing profiles (Small/Medium/Large) and capacity planning, see the
 
 You can enable additional stack features for specific legacy applications via `.env` or configuration files:
 
+- **Optional Database (MariaDB)**: Controlled via `COMPOSE_PROFILES`. By default, `COMPOSE_PROFILES=db` is configured for projects requiring a database. For PHP-only projects that don't need MariaDB, omit `db` from `COMPOSE_PROFILES` (e.g., `COMPOSE_PROFILES=` or `COMPOSE_PROFILES=sftp`).
 - **Optional Redis Cache**: Add `COMPOSE_PROFILES=redis` to your `.env` to automatically start a lightweight Redis container (powered by Valkey). **[Read the Full Redis Integration Guide here](docs/redis.md).**
 - **Xdebug for Local Dev**: Set `PHP_XDEBUG_MODE=debug` (or another mode like `develop`) in your `.env`. Keep it disabled in production.
 - **Cronjobs**: Schedule application tasks without connecting to the container by adding cron syntax to `scripts/crontab`. A dedicated CLI container executes them automatically. **[Read the Cronjobs Guide here](docs/cron.md).**
